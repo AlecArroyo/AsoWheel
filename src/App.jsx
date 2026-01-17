@@ -296,6 +296,7 @@ const CanvasWheel = ({ participants, onWinner }) => {
   
   // Refs para manejar la animación sin causar re-renderizados.
   const animationRef = useRef(null); // Ref para el ID de requestAnimationFrame.
+  const isSpinningRef = useRef(false); // Ref para leer el estado de giro desde animaciones.
   const spinStartRef = useRef(0);    // Ref para el tiempo de inicio del giro.
   const maxSpeedRef = useRef(0);     // Ref para la velocidad máxima del giro.
   const colorCache = useRef([]);     // Ref para almacenar los colores generados.
@@ -429,12 +430,14 @@ const CanvasWheel = ({ participants, onWinner }) => {
     const i = participants.length - Math.floor((angle / (Math.PI * 2)) * participants.length) - 1;
     const winnerName = participants[i]?.name || '';
 
-    // Muestra el nombre del ganador junto a la aguja.
-    ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.font = 'bold 1.5em Arial';
-    ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
-    ctx.fillRect(centerX + size + 22, centerY - 15, ctx.measureText(winnerName).width + 10, 30);
-    ctx.fillStyle = '#000000';
-    ctx.fillText(winnerName, centerX + size + 25, centerY);
+    // Muestra el nombre del ganador junto a la aguja SOLO mientras la ruleta está girando.
+    if (isSpinningRef.current) {
+      ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.font = 'bold 1.5em Arial';
+      ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
+      ctx.fillRect(centerX + size + 22, centerY - 15, ctx.measureText(winnerName).width + 10, 30);
+      ctx.fillStyle = '#000000';
+      ctx.fillText(winnerName, centerX + size + 25, centerY);
+    }
   };
 
   /**
@@ -491,6 +494,7 @@ const CanvasWheel = ({ participants, onWinner }) => {
 
     // Si la animación ha terminado.
     if (finished) {
+      isSpinningRef.current = false;
       setIsSpinning(false);
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
       animationRef.current = null;
@@ -512,6 +516,7 @@ const CanvasWheel = ({ participants, onWinner }) => {
   const spin = () => {
     if (isSpinning) return;
     setIsSpinning(true);
+    isSpinningRef.current = true;
     onWinner(null); // Limpia el ganador anterior.
     spinStartRef.current = Date.now();
     // Velocidad máxima aleatoria para que cada giro sea diferente.
@@ -576,7 +581,7 @@ const Controls = ({
 
   return (
     <div className="flex flex-col h-full">
-      <h1 className="text-3xl font-bold text-blue-600 mb-8">AsoWheel</h1>
+      <h1 className="text-3xl font-light text-blue-600 mb-8">AsoWheel</h1>
 
       {/* Navegación por pestañas */}
       <div className="flex gap-3 mb-6">
