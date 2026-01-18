@@ -1,4 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
+import CanvasWheelSpin from './CanvasWheelSpin'
+
+
 
 // --- Componentes de Estilo y Layout -------------------------------------------
 // Estos componentes se encargan únicamente de la apariencia visual general.
@@ -28,7 +31,7 @@ const FestiveBackground = () => (
  * Mantiene los estilos globales separados.
  */
 const GlobalStyles = () => (
-    <style jsx global>{`
+  <style jsx global>{`
         @keyframes gradientBG {
             0% { background-position: 0% 50%; }
             50% { background-position: 100% 50%; }
@@ -48,17 +51,17 @@ const GlobalStyles = () => (
  * Componente de encabezado simple.
  */
 const Header = () => (
-    <header className="absolute top-0 left-0 p-8">
-        <div className="flex items-center gap-2">
-        <div className="flex items-center gap-1">
-            <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-            <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-            <div className="w-3 h-3 bg-orange-400 rounded-full"></div>
-        </div>
-        <span className="text-2xl font-bold text-blue-600">asohp</span>
-        <span className="text-sm text-gray-500">Sorteos</span>
-        </div>
-    </header>
+  <header className="absolute top-0 left-0 p-8">
+    <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1">
+        <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+        <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+        <div className="w-3 h-3 bg-orange-400 rounded-full"></div>
+      </div>
+      <span className="text-2xl font-bold text-blue-600">asohp</span>
+      <span className="text-sm text-gray-500">Sorteos</span>
+    </div>
+  </header>
 );
 
 
@@ -79,8 +82,30 @@ export default function App() {
   // Estado para la lista de ausentes.
   const [absents, setAbsents] = useState([]);
 
+  const [winningIndex, setWinningIndex] = useState(null);
+
+
   // Paleta de colores para asignar a los segmentos de la ruleta.
   const colors = ['#E53E3E', '#F6E05E', '#48BB78', '#4299E1', '#9F7AEA', '#ED8936', '#F56565', '#4FD1C5', '#FC8181', '#63B3ED'];
+
+
+  const handleSpin = () => {
+    if (!participants || participants.length === 0) return;
+    // usar crypto si está disponible
+    let index;
+    if (window.crypto && window.crypto.getRandomValues) {
+      const a = new Uint32Array(1);
+      window.crypto.getRandomValues(a);
+      index = a[0] % participants.length;
+    } else {
+      index = Math.floor(Math.random() * participants.length);
+    }
+    // No fijar el ganador hasta que la rueda termine; la librería notificará en onSpinEnd.
+    console.log('App: handleSpin chosen index', index)
+    setWinner(null);
+    setWinningIndex(index);
+  }
+
 
   // --- Efectos Secundarios (Hooks useEffect) ---
 
@@ -134,7 +159,7 @@ export default function App() {
         .join('\n')
     );
   };
-  
+
   /**
    * Maneja la acción cuando el ganador es marcado como "Presente".
    */
@@ -170,13 +195,34 @@ export default function App() {
     <div className="flex h-screen relative" style={{ fontFamily: 'Poppins, sans-serif' }}>
       <GlobalStyles />
       <FestiveBackground />
-      <Header/>
+      <Header />
 
       {/* Contenedor principal para la ruleta */}
       <div className="w-2/3 flex flex-col items-center justify-center relative z-10">
         {participants.length > 0 ? (
           <>
-            <CanvasWheel participants={participants} onWinner={setWinner} />
+            {/* <CanvasWheel participants={participants} onWinner={setWinner} /> */}
+            <CanvasWheelSpin
+              items={participants.map(p => p.name)}
+              winningIndex={winningIndex}
+              config={{ size: 800, pointerSize: 36, rotations: 10}}
+              onSpinEnd={(index) => {
+                // Cuando la librería indica que la rueda descansó, fijar ganador y mostrar modal.
+                const name = participants?.[index]?.name;
+                if (name) setWinner(name);
+                setShowModal(true);
+                // Resetear para permitir futuros giros
+                setWinningIndex(null);
+              }}
+            />
+
+            <button
+              onClick={handleSpin}
+              className="mt-6 px-6 py-3 bg-white/80 backdrop-blur-sm border border-orange-500/50 rounded-full text-orange-600 font-bold text-lg hover:bg-white transition-colors shadow-lg"
+            >
+              Girar Ruleta
+            </button>
+
             {winner && (
               <div className="mt-6 bg-green-100 border-2 border-green-500 rounded-lg px-8 py-4">
                 <p className="text-green-800 font-semibold text-lg">
@@ -225,324 +271,67 @@ export default function App() {
  * @param {{show: boolean, winner: string, onPresent: Function, onAbsent: Function}} props
  */
 const WinnerModal = ({ show, winner, onPresent, onAbsent }) => {
-    const [countdown, setCountdown] = useState(10);
-  
-    /**
-     * Efecto que maneja la cuenta regresiva del modal.
-     * Se activa cuando se muestra el modal y hay un ganador.
-     */
-    useEffect(() => {
-      // No hacer nada si el modal no está visible o no hay ganador.
-      if (!show || !winner) return;
-  
-      // Reiniciar la cuenta regresiva.
-      setCountdown(10);
-  
-      // Iniciar el intervalo de la cuenta regresiva.
-      const interval = setInterval(() => {
-        setCountdown(prev => {
-          // Si la cuenta llega a 1, se detiene el intervalo y se marca como ausente.
-          if (prev <= 1) {
-            clearInterval(interval);
-            onAbsent(); 
-            return 0;
-          }
-          // Restar 1 al contador.
-          return prev - 1;
-        });
-      }, 1000);
-  
-      // Función de limpieza: se ejecuta cuando el componente se desmonta o las dependencias cambian.
-      return () => clearInterval(interval);
-    }, [show, winner, onAbsent]); // Dependencias: se ejecuta si cambia alguna de estas.
-  
-    // No renderizar nada si el modal no debe mostrarse.
-    if (!show) return null;
-  
-    return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <div
-          className="bg-white rounded-xl p-8 w-96 text-center shadow-xl"
-          style={{ animation: 'modalPop 600ms cubic-bezier(.2,.8,.2,1)' }}
-        >
-          <h2 className="text-2xl font-bold mb-4">🎉 Ganador</h2>
-          <p className="text-xl font-semibold mb-4">{winner}</p>
-          <p className="text-gray-600 mb-6">
-            Tiempo restante: <span className="font-bold">{countdown}</span> segundos
-          </p>
-          <button
-            onClick={onPresent}
-            className="w-full bg-green-500 text-white py-3 rounded-lg font-semibold hover:bg-green-600 transition"
-          >
-            ✅ Presente
-          </button>
-        </div>
-      </div>
-    );
-  };
-  
-
-// --- Componente de la Ruleta (Canvas) ----------------------------------------
-
-/**
- * Componente que renderiza y controla la ruleta usando un Canvas.
- * @param {{participants: Array<{name: string}>, onWinner: Function}} props
- */
-const CanvasWheel = ({ participants, onWinner }) => {
-  // --- Referencias (Refs) y Estados ---
-  const canvasRef = useRef(null); // Ref para acceder al elemento canvas.
-  const [angleCurrent, setAngleCurrent] = useState(0); // Ángulo actual de rotación de la ruleta.
-  const [isSpinning, setIsSpinning] = useState(false); // Estado para saber si la ruleta está girando.
-  
-  // Refs para manejar la animación sin causar re-renderizados.
-  const animationRef = useRef(null); // Ref para el ID de requestAnimationFrame.
-  const isSpinningRef = useRef(false); // Ref para leer el estado de giro desde animaciones.
-  const spinStartRef = useRef(0);    // Ref para el tiempo de inicio del giro.
-  const maxSpeedRef = useRef(0);     // Ref para la velocidad máxima del giro.
-  const colorCache = useRef([]);     // Ref para almacenar los colores generados.
-  const angleRef = useRef(0);        // Ref para el ángulo, usado para obtener el ganador final.
-  const offscreenRef = useRef(null); // Canvas offscreen para cachear la rueda.
-  const cachedImageRef = useRef(null); // Imagen/cache para dibujar rápido.
-
-  // --- Constantes de la Ruleta ---
-  const centerX = 400; // Centro X del canvas.
-  const centerY = 300; // Centro Y del canvas.
-  const size = 250;    // Radio de la ruleta.
-  const upTime = 2;   // Duración de la aceleración (ms).
-  const downTime = 10000; // Duración de la desaceleración (ms).
-
-  // --- Efectos ---
+  const [countdown, setCountdown] = useState(10);
 
   /**
-   * Efecto para generar y cachear los colores de los participantes.
-   * También establece una posición inicial aleatoria para la ruleta.
+   * Efecto que maneja la cuenta regresiva del modal.
+   * Se activa cuando se muestra el modal y hay un ganador.
    */
   useEffect(() => {
-    // Espectro de colores para generar hashes.
-    const spectrum = ['#A2395B', '#A63552', '#AA3149', '#AE2D40', '#B22937', '#A23A53', '#924B6F', '#825C8B', '#6F6DA7', '#A63570', '#AC2F5A', '#B22944', '#B8232E', '#C11C17', '#A72A37', '#8D3857', '#734677', '#575597', '#A6358C', '#B43B6A', '#C24148', '#D04726', '#DE5003', '#B84D24', '#924A45', '#6C4766', '#434187'];
+    // No hacer nada si el modal no está visible o no hay ganador.
+    if (!show || !winner) return;
 
-    // Genera un color pseudoaleatorio basado en el nombre del participante.
-    colorCache.current = participants.map((p) => {
-      const hash = p.name.split('').reduce((acc, char) => ((acc << 5) + acc) + char.charCodeAt(0), 5381);
-      return spectrum[Math.abs(hash) % spectrum.length];
-    });
+    // Reiniciar la cuenta regresiva.
+    setCountdown(10);
 
-    // Inicia la ruleta en una posición aleatoria.
-    const r = Math.floor(Math.random() * participants.length);
-    const initial = ((r + 0.5) / participants.length) * Math.PI * 2;
-    setAngleCurrent(initial);
-    angleRef.current = initial;
+    // Iniciar el intervalo de la cuenta regresiva.
+    const interval = setInterval(() => {
+      setCountdown(prev => {
+        // Si la cuenta llega a 1, se detiene el intervalo y se marca como ausente.
+        if (prev <= 1) {
+          clearInterval(interval);
+          onAbsent();
+          return 0;
+        }
+        // Restar 1 al contador.
+        return prev - 1;
+      });
+    }, 1000);
 
-    // Preparar offscreen canvas del mismo tamaño que el principal.
-    const off = document.createElement('canvas');
-    off.width = 800; off.height = 600;
-    offscreenRef.current = off;
-    // Dibujar la rueda estática en offscreen para cachear.
-    const offCtx = off.getContext('2d');
-    drawWheel(offCtx, 0);
-    cachedImageRef.current = off; // usamos el canvas directamente como caché
-  }, [participants]); // Se ejecuta cuando la lista de participantes cambia.
+    // Función de limpieza: se ejecuta cuando el componente se desmonta o las dependencias cambian.
+    return () => clearInterval(interval);
+  }, [show, winner, onAbsent]); // Dependencias: se ejecuta si cambia alguna de estas.
 
-  /**
-   * Dibuja inicialmente (o cuando participantes cambian) usando la caché.
-   */
-  useEffect(() => {
-    // Si tenemos caché y canvas principal, dibujamos la posición actual.
-    draw(angleRef.current);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [participants]);
-
-  /**
-   * Efecto de limpieza para cancelar la animación si el componente se desmonta.
-   */
-  useEffect(() => {
-    return () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
-    };
-  }, []); // Se ejecuta solo una vez al montar el componente.
-
-  
-  // --- Funciones de Dibujo en Canvas ---
-
-  const drawWheel = (ctx, angle) => {
-    const len = participants.length;
-    const PI2 = Math.PI * 2;
-    let lastAngle = angle;
-
-    // Estilos base para los segmentos.
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = '#FFFFFF';
-    ctx.textBaseline = 'middle';
-    ctx.textAlign = 'center';
-    ctx.font = '1.2em Arial';
-
-    // Dibuja cada segmento de la ruleta.
-    for (let i = 0; i < len; i++) {
-      const segmentAngle = PI2 * ((i + 1) / len) + angle;
-      ctx.save();
-      ctx.beginPath();
-      ctx.moveTo(centerX, centerY);
-      ctx.arc(centerX, centerY, size, lastAngle, segmentAngle, false);
-      ctx.lineTo(centerX, centerY);
-      ctx.closePath();
-      ctx.fillStyle = colorCache.current[i] || '#999';
-      ctx.fill();
-      ctx.stroke();
-
-      // Dibuja el texto del participante.
-      ctx.save();
-      ctx.translate(centerX, centerY);
-      ctx.rotate((lastAngle + segmentAngle) / 2);
-      ctx.fillStyle = '#FFFFFF';
-      ctx.fillText(participants[i].name.substr(0, 20), size / 2 + 20, 0);
-      ctx.restore();
-      ctx.restore();
-
-      lastAngle = segmentAngle;
-    }
-
-    // Dibuja el círculo central y el borde exterior.
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, 20, 0, PI2, false);
-    ctx.closePath();
-    ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#000000';
-    ctx.fill(); ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, size, 0, PI2, false);
-    ctx.closePath();
-    ctx.lineWidth = 10; ctx.strokeStyle = '#000000';
-    ctx.stroke();
-  };
-
-  const drawNeedle = (ctx, angle) => {
-    // Dibuja el puntero/aguja.
-    ctx.lineWidth = 1; ctx.strokeStyle = '#000000'; ctx.fillStyle = '#EF4444';
-    ctx.beginPath();
-    ctx.moveTo(centerX + size - 40, centerY);
-    ctx.lineTo(centerX + size + 20, centerY - 10);
-    ctx.lineTo(centerX + size + 20, centerY + 10);
-    ctx.closePath();
-    ctx.stroke(); ctx.fill();
-
-    // Calcula el ganador actual basado en el ángulo.
-    const i = participants.length - Math.floor((angle / (Math.PI * 2)) * participants.length) - 1;
-    const winnerName = participants[i]?.name || '';
-
-    // Muestra el nombre del ganador junto a la aguja SOLO mientras la ruleta está girando.
-    if (isSpinningRef.current) {
-      ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.font = 'bold 1.5em Arial';
-      ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
-      ctx.fillRect(centerX + size + 22, centerY - 15, ctx.measureText(winnerName).width + 10, 30);
-      ctx.fillStyle = '#000000';
-      ctx.fillText(winnerName, centerX + size + 25, centerY);
-    }
-  };
-
-  /**
-   * Función principal de dibujo que llama a las sub-funciones.
-   */
-  const draw = (angle) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, 800, 600); // Limpia el canvas antes de dibujar.
-    // Si tenemos una imagen cacheada, dibujarla rotada es mucho más barato.
-    if (cachedImageRef.current) {
-      ctx.save();
-      // Mover origen al centro para rotar.
-      ctx.translate(centerX, centerY);
-      ctx.rotate(angle);
-      // Dibuja la imagen cacheada centrada.
-      ctx.drawImage(cachedImageRef.current, -centerX, -centerY);
-      ctx.restore();
-    } else {
-      drawWheel(ctx, angle);
-    }
-    // Siempre dibujar la aguja encima.
-    drawNeedle(ctx, angle);
-  };
-  
-  // --- Lógica de Animación ---
-
-  /**
-   * El "corazón" de la animación. Se llama en cada frame.
-   */
-  const onTimerTick = () => {
-    const duration = Date.now() - spinStartRef.current;
-    let progress = 0;
-    let finished = false;
-    let angleDelta = 0;
-
-    // Fase de aceleración.
-    if (duration < upTime) {
-      progress = duration / upTime;
-      angleDelta = maxSpeedRef.current * Math.sin(progress * Math.PI / 2);
-    } else { // Fase de desaceleración.
-      progress = (duration - upTime) / downTime;
-      angleDelta = maxSpeedRef.current * Math.cos(progress * Math.PI / 2);
-      if (progress >= 1) {
-        finished = true;
-      }
-    }
-
-    // Actualiza el ángulo en el ref y dibuja directamente sin setState para evitar re-renders.
-    const newAngle = (angleRef.current + angleDelta) % (Math.PI * 2);
-    angleRef.current = newAngle;
-    draw(newAngle);
-
-    // Si la animación ha terminado.
-    if (finished) {
-      isSpinningRef.current = false;
-      setIsSpinning(false);
-      if (animationRef.current) cancelAnimationFrame(animationRef.current);
-      animationRef.current = null;
-
-      // Determina el ganador final y lo comunica al componente padre.
-      const finalAngle = angleRef.current;
-      const i = participants.length - Math.floor((finalAngle / (Math.PI * 2)) * participants.length) - 1;
-      const winnerName = participants[i]?.name || '';
-      onWinner(winnerName);
-    } else {
-      // Si no ha terminado, solicita el siguiente frame.
-      animationRef.current = requestAnimationFrame(onTimerTick);
-    }
-  };
-
-  /**
-   * Inicia el giro de la ruleta.
-   */
-  const spin = () => {
-    if (isSpinning) return;
-    setIsSpinning(true);
-    isSpinningRef.current = true;
-    onWinner(null); // Limpia el ganador anterior.
-    spinStartRef.current = Date.now();
-    // Velocidad máxima aleatoria para que cada giro sea diferente.
-    maxSpeedRef.current = Math.PI / (16 + Math.random() * 10);
-    animationRef.current = requestAnimationFrame(onTimerTick);
-  };
+  // No renderizar nada si el modal no debe mostrarse.
+  if (!show) return null;
 
   return (
-    <div className="flex flex-col items-center">
-      <canvas
-        ref={canvasRef}
-        width={800}
-        height={600}
-        onClick={spin}
-        className="cursor-pointer"
-      />
-      <button
-        onClick={spin}
-        disabled={isSpinning}
-        className="mt-4 px-6 py-2 bg-white/80 backdrop-blur-sm border border-orange-500/50 rounded-full text-orange-600 font-bold text-lg hover:bg-white transition-colors disabled:opacity-50 shadow-lg"
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div
+        className="bg-white rounded-xl p-8 w-96 text-center shadow-xl"
+        style={{ animation: 'modalPop 600ms cubic-bezier(.2,.8,.2,1)' }}
       >
-        {isSpinning ? 'Girando...' : 'Presiona Para Girar la Ruleta'}
-      </button>
+        <h2 className="text-2xl font-bold mb-4">🎉 Ganador</h2>
+        <p className="text-xl font-semibold mb-4">{winner}</p>
+        <p className="text-gray-600 mb-6">
+          Tiempo restante: <span className="font-bold">{countdown}</span> segundos
+        </p>
+        <button
+          onClick={onPresent}
+          className="w-full bg-green-500 text-white py-3 rounded-lg font-semibold hover:bg-green-600 transition"
+        >
+          ✅ Presente
+        </button>
+      </div>
     </div>
   );
 };
+
+
+// --- Componente de la Ruleta (Canvas) ----------------------------------------
+
+
+
 
 
 // --- Componente del Panel de Controles ---------------------------------------
@@ -669,12 +458,12 @@ const Controls = ({
       {/* Botones de acción */}
       <div className="flex flex-col gap-3">
         <button onClick={handleAddExample} className="flex items-center justify-center gap-2 bg-white border border-gray-200 text-blue-600 px-4 py-3 rounded-xl text-sm font-medium hover:bg-blue-50 transition-colors">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
-            Ejemplo
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
+          Ejemplo
         </button>
         <button onClick={handleClear} className="flex items-center justify-center gap-2 bg-white border border-gray-200 text-red-600 px-4 py-3 rounded-xl text-sm font-medium hover:bg-red-50 transition-colors">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-            Limpiar
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+          Limpiar
         </button>
       </div>
     </div>
