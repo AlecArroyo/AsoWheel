@@ -44,9 +44,30 @@ export default function CanvasWheelSpin({ items = [], winningIndex, onSpinEnd, c
   // Helpers
   const mod = (x, m) => ((x % m) + m) % m
   const angleToIndex = (theta, n, anglePer) => {
-    const raw = -theta / anglePer
-    const v = mod(raw - 0.5, n)
-    return Math.floor(v)
+    // Robust mapping from wheel rotation angle -> index under the pointer.
+    // We compute the screen angle of each sector's center after applying the rotation
+    // and pick the index whose center is closest to the pointer direction (-Math.PI/2).
+    const pointerAngle = -Math.PI / 2
+    const normalize = (a) => {
+      // Normalize to [-PI, PI)
+      const TWO_PI = Math.PI * 2
+      let v = ((a + Math.PI) % TWO_PI) - Math.PI
+      if (v < -Math.PI) v += TWO_PI
+      return v
+    }
+
+    let bestIdx = 0
+    let bestDiff = Infinity
+    for (let i = 0; i < n; i++) {
+      const center = i * anglePer - Math.PI / 2 + anglePer / 2 // center angle of sector i in wheel-local coords
+      const centerScreen = center + theta // after rotating the wheel by theta
+      const diff = Math.abs(normalize(centerScreen - pointerAngle))
+      if (diff < bestDiff) {
+        bestDiff = diff
+        bestIdx = i
+      }
+    }
+    return bestIdx
   }
 
   const getInitials = (text) => {
@@ -143,7 +164,7 @@ export default function CanvasWheelSpin({ items = [], winningIndex, onSpinEnd, c
         const idx = angleToIndex(0, n, anglePer)
         if (pointerLabelRef.current) {
           pointerLabelRef.current.textContent = items[idx] ?? ''
-          // Ensure pointer label is hidden when wheel is at rest
+          // hide label while wheel is at rest
           pointerLabelRef.current.style.visibility = 'hidden'
         }
       } catch (err) {
@@ -173,7 +194,7 @@ export default function CanvasWheelSpin({ items = [], winningIndex, onSpinEnd, c
     const start = performance.now()
     const startAngle = 0
 
-    // Show pointer label while animating to create the 'names passing by' effect
+    // show label only during animation to simulate 'names passing by'
     if (pointerLabelRef.current) pointerLabelRef.current.style.visibility = 'visible'
     animationRef.current.running = true
 
@@ -223,11 +244,26 @@ export default function CanvasWheelSpin({ items = [], winningIndex, onSpinEnd, c
         vctx.drawImage(offscreenRef.current, -sizeLocal / 2, -sizeLocal / 2, sizeLocal, sizeLocal)
         vctx.restore()
 
-        // Asegurar etiqueta final
+        // Asegurar etiqueta final y calcular índice final de forma más robusta
         let finalIdx = 0
         try {
-          finalIdx = angleToIndex(totalTarget, n, anglePer)
+          // Normalize the target angle into -2PI..2PI to avoid floating point errors
+          const TWO_PI = Math.PI * 2
+          const norm = mod(totalTarget, TWO_PI)
+          finalIdx = angleToIndex(norm, n, anglePer)
           if (pointerLabelRef.current) pointerLabelRef.current.textContent = items[finalIdx] ?? ''
+
+          // Fallback: if label text maps to a different index (rare rounding cases), prefer it
+          try {
+            const labelText = pointerLabelRef.current?.textContent ?? ''
+            if (labelText) {
+              const labelIdx = items.findIndex(it => String(it) === String(labelText))
+              if (labelIdx >= 0 && labelIdx !== finalIdx) {
+                finalIdx = labelIdx
+                if (pointerLabelRef.current) pointerLabelRef.current.textContent = items[finalIdx] ?? ''
+              }
+            }
+          } catch (e) { /* ignore */ }
         } catch (err) { /* ignore */ }
 
         // Parpadeo del slice ganador antes de notificar el fin (~1s)
@@ -266,7 +302,7 @@ export default function CanvasWheelSpin({ items = [], winningIndex, onSpinEnd, c
 
         const endId = setTimeout(() => {
           try { drawHighlight(false) } catch (e) {}
-          // hide the pointer label when the wheel is at rest
+          // hide pointer label when wheel at rest
           try { if (pointerLabelRef.current) pointerLabelRef.current.style.visibility = 'hidden' } catch (e) {}
           try { onSpinEnd?.(finalIdx) } catch (err) { console.error(err) }
           blinkTimersRef.current = []
