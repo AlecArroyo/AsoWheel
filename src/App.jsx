@@ -88,6 +88,25 @@ export default function App() {
 
   const [winningIndex, setWinningIndex] = useState(null);
 
+  // Bandera que indica si la ruleta está girando. Usada para deshabilitar controles/zoom.
+  const [isSpinning, setIsSpinning] = useState(false);
+
+  // Notification state for subtle toasts (used when confirming presence)
+  const [notification, setNotification] = useState(null);
+  // Stage for toast animation: 'idle' | 'pre-enter' | 'entering' | 'visible' | 'exiting'
+  const [notificationStage, setNotificationStage] = useState('idle');
+  // Mini configuration (JSON) for animation directions/durations/easings
+  const [toastConfig, setToastConfig] = useState({
+    // directions can be 'left' or 'right' (entry: from this side -> center, exit: to this side)
+    entryDirection: 'left',
+    exitDirection: 'left',
+    entryDuration: 260, // ms
+    exitDuration: 260, // ms
+    entryEasing: 'ease-in',
+    exitEasing: 'ease-out',
+    visibleDuration: 3000 // how long toast stays before exit starts
+  });
+
   // Ajustes configurables de la aplicación
   const [settings, setSettings] = useState({
     claimTime: 15, // segundos para reclamar (por defecto 15)
@@ -111,6 +130,8 @@ export default function App() {
 
   const handleSpin = () => {
     if (!participants || participants.length === 0) return;
+    // Marcar que se inició la animación (evita clicks repetidos antes del inicio en el child)
+    setIsSpinning(true);
     // usar crypto si está disponible
     let index;
     if (window.crypto && window.crypto.getRandomValues) {
@@ -200,6 +221,36 @@ export default function App() {
     }
   }, [winner]);
 
+  // Notification lifecycle: handle enter, visible and exit stages using toastConfig
+  useEffect(() => {
+    if (!notification) {
+      setNotificationStage('idle');
+      return;
+    }
+
+    let enterTimer = null;
+    let visibleTimer = null;
+    let exitTimer = null;
+
+    // start pre-enter then go to entering to trigger transition
+    setNotificationStage('pre-enter');
+    // small delay to allow initial style to apply
+    enterTimer = setTimeout(() => setNotificationStage('entering'), 16);
+
+    // once entering, wait visibleDuration then start exiting
+    visibleTimer = setTimeout(() => {
+      setNotificationStage('exiting');
+      // after exitDuration clear the notification
+      exitTimer = setTimeout(() => setNotification(null), toastConfig.exitDuration || 260);
+    }, (toastConfig.visibleDuration || 3000) + (toastConfig.entryDuration || 260));
+
+    return () => {
+      clearTimeout(enterTimer);
+      clearTimeout(visibleTimer);
+      clearTimeout(exitTimer);
+    };
+  }, [notification, toastConfig]);
+
 
   // --- Funciones de Lógica ---
 
@@ -229,6 +280,8 @@ export default function App() {
     // Validar winner y evitar duplicados.
     if (!winner) return;
     setWinners(prev => (prev.includes(winner) ? prev : [...prev, winner])); // Añade solo si no existe.
+    // Mostrar notificación sutil indicando el añadido exitoso
+    setNotification(`¡${winner} agregado a ganadores!`);
     removeWinnerFromParticipants(winner);  // Lo elimina de la lista de participantes.
     setShowModal(false);                   // Oculta el modal.
     setWinner(null);                       // Limpia el estado del ganador.
@@ -245,6 +298,63 @@ export default function App() {
       <FestiveBackground />
       <Header />
 
+      {/* Notification toast (subtle) */}
+      {notification && (() => {
+        // compute transform based on notificationStage and config
+        const entryFrom = (toastConfig.entryDirection === 'left') ? '-120%' : '120%';
+        const exitTo = (toastConfig.exitDirection === 'left') ? '-120%' : '120%';
+
+        let transform = 'translateX(0)';
+        let opacity = 2;
+        let transition = '';
+
+        if (notificationStage === 'pre-enter') {
+          transform = `translateX(${entryFrom})`;
+          opacity = 0;
+          transition = 'none';
+        } else if (notificationStage === 'entering') {
+          transform = 'translateX(0)';
+          opacity = 1;
+          transition = `transform ${toastConfig.entryDuration}ms ${toastConfig.entryEasing}, opacity ${toastConfig.entryDuration}ms ${toastConfig.entryEasing}`;
+        } else if (notificationStage === 'exiting') {
+          transform = `translateX(${exitTo})`;
+          opacity = 0;
+          transition = `transform ${toastConfig.exitDuration}ms ${toastConfig.exitEasing}, opacity ${toastConfig.exitDuration}ms ${toastConfig.exitEasing}`;
+        } else {
+          // visible
+          transform = 'translateX(0)';
+          opacity = 1;
+          transition = `transform ${toastConfig.entryDuration}ms ${toastConfig.entryEasing}, opacity ${toastConfig.entryDuration}ms ${toastConfig.entryEasing}`;
+        }
+
+        return (
+          <div
+            role="status"
+            aria-live="polite"
+            className="
+    fixed bottom-10 left-10 z-[60]
+    bg-green-100 text-green-800
+    opacity-70
+    backdrop-blur-lg
+    px-3.5 py-2.5
+    rounded-sm
+    shadow-[0_6px_18px_rgba(6,95,70,0.08)]
+    font-medium
+    transition-all
+    text-md
+  "
+            style={{
+              transform,
+              opacity,
+              transition,
+            }}
+          >
+            {notification}
+          </div>
+
+        );
+      })()}
+
       {/* Contenedor principal para la ruleta */}
       <div className="w-full md:w-2/3 flex flex-col items-center justify-center relative z-10 px-4 md:px-0">
         {participants.length > 0 ? (
@@ -255,7 +365,10 @@ export default function App() {
                 items={participants.map(p => p.name)}
                 winningIndex={winningIndex}
                 config={{ size: wheelSize, pointerSize: Math.max(18, Math.round(wheelSize * 0.040)), rotations: 20 }}
+                onSpinStart={() => setIsSpinning(true)}
                 onSpinEnd={(index) => {
+                  // La animación terminó: reactivar controles
+                  setIsSpinning(false);
                   // Cuando la librería indica que la rueda descansó, fijar ganador y mostrar modal.
                   const name = participants?.[index]?.name;
                   if (name) setWinner(name);
@@ -268,14 +381,17 @@ export default function App() {
 
             {/* Controles de tamaño: botón que muestra/oculta los controles en un pequeño popover */}
             <div style={{ position: 'absolute', top: 8, right: 8, zIndex: 30 }}>
-              <span
+              <button
                 aria-label={showSizeControls ? 'Ocultar controles' : 'Mostrar controles'}
                 title={showSizeControls ? 'Cerrar' : 'Ajustes de tamaño'}
-                onClick={() => setShowSizeControls(v => !v)}
-                className="bg-white/90 backdrop-blur-sm border border-gray-200 p-2 rounded-full mx-5 my-5 backdrop-blur-3xl text-gray-700 shadow-sm hover:scale-105 transition-transform material-symbols-outlined"
+                onClick={() => { if (!isSpinning) setShowSizeControls(v => !v) }}
+                role="button"
+                aria-disabled={isSpinning}
+                className="bg-white/90 backdrop-blur-sm border flex justify-center border-gray-200 p-2 rounded-full mx-5 my-5 backdrop-blur-3xl text-neutral-400 shadow-sm hover:scale-105 transition-transform "
               >
-                {showSizeControls ? 'close' : 'zoom_in'}
-              </span>
+                <span className='material-symbols-outlined mx-0.5'>{showSizeControls ? 'close' : 'linear_scale'}</span>
+                <p className='text-sm font-regular m-0.5'>{showSizeControls ? 'cerrar' : 'Tamaño '}</p> 
+              </button>
 
               {showSizeControls && (
                 <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 8, minWidth: 140 }}>
@@ -283,16 +399,16 @@ export default function App() {
                     <button
                       aria-label="Aumentar ruleta"
                       title="Aumentar"
-                      onClick={() => { setAutoSize(false); setWheelSize(s => Math.min(800, Math.round(s * 1.15))); }}
-                      className="bg-white/80 backdrop-blur-sm border border-gray-200 rounded-full w-9 h-9 flex items-center justify-center text-gray-700 shadow-sm hover:scale-105 transition-transform"
+                      onClick={() => { if (!isSpinning) { setAutoSize(false); setWheelSize(s => Math.min(800, Math.round(s * 1.15))); } }}
+                      disabled={isSpinning}
+                      className={`bg-white/80 backdrop-blur-sm border border-gray-200 rounded-full w-9 h-9 flex items-center justify-center text-gray-700 shadow-sm ${isSpinning ? 'opacity-60 cursor-not-allowed' : 'hover:scale-105 transition-transform'}`}
                     >
                       +
                     </button>
                     <button
-                      aria-label="Disminuir ruleta"
-                      title="Disminuir"
-                      onClick={() => { setAutoSize(false); setWheelSize(s => Math.max(140, Math.round(s / 1.15))); }}
-                      className="bg-white/80 backdrop-blur-sm border border-gray-200 rounded-full w-9 h-9 flex items-center justify-center text-gray-700 shadow-sm hover:scale-95 transition-transform"
+                      onClick={() => { if (!isSpinning) { setAutoSize(false); setWheelSize(s => Math.max(140, Math.round(s / 1.15))); } }}
+                      disabled={isSpinning}
+                      className={`bg-white/80 backdrop-blur-sm border border-gray-200 rounded-full w-9 h-9 flex items-center justify-center text-gray-700 shadow-sm ${isSpinning ? 'opacity-60 cursor-not-allowed' : 'hover:scale-95 transition-transform'}`}
                     >
                       −
                     </button>
@@ -303,19 +419,12 @@ export default function App() {
                       <label className="text-xs text-gray-600">Tamaño: <strong>{wheelSize}px</strong></label>
                       <button
                         title="Modo automático"
-                        onClick={() => setAutoSize(true)}
+                        onChange={(e) => { if (!isSpinning) { setAutoSize(false); setWheelSize(Number(e.target.value)); } }}
+                        disabled={isSpinning}
                         className={`px-2 py-1 text-xs rounded ${autoSize ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700'}`}
                       >Auto</button>
                     </div>
-                    <input
-                      aria-label="Ajustar tamaño ruleta"
-                      type="range"
-                      min={140}
-                      max={800}
-                      value={wheelSize}
-                      onChange={(e) => { setAutoSize(false); setWheelSize(Number(e.target.value)); }}
-                      style={{ width: 160 }}
-                    />
+                    {/* Slider eliminado a petición del usuario: control de tamaño ahora solo mediante botones y modo Auto */}
                   </div>
                 </div>
               )}
@@ -349,6 +458,7 @@ export default function App() {
           setWinners={setWinners}
           settings={settings}
           setSettings={setSettings}
+          isSpinning={isSpinning}
         />
       </div>
 
@@ -475,7 +585,8 @@ const Controls = ({
   winners,
   setWinners,
   settings,
-  setSettings
+  setSettings,
+  isSpinning
 }) => {
   // Estado para la pestaña activa (participantes, ganadores).
   const [activeTab, setActiveTab] = useState('participantes');
@@ -537,6 +648,7 @@ const Controls = ({
               placeholder="Buscar..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              disabled={isSpinning}
               className="w-full bg-white border border-gray-300 rounded-full py-3 pl-11 pr-4 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent text-sm"
             />
             <svg className="w-5 h-5 text-gray-400 absolute top-1/2 left-4 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
@@ -551,7 +663,8 @@ const Controls = ({
             <label className="text-sm text-gray-600 mb-2 font-medium">Lista (uno por línea):</label>
             <textarea
               value={participantsText}
-              onChange={(e) => setParticipantsText(e.target.value)}
+              onChange={(e) => { if (!isSpinning) setParticipantsText(e.target.value) }}
+              disabled={isSpinning}
               placeholder="Escribe un nombre por línea...&#10;Ejemplo:&#10;Juan&#10;María&#10;Pedro"
               className="flex-1 w-full resize-none focus:outline-none text-sm font-mono p-2 border border-gray-200 rounded-lg"
             />
@@ -631,7 +744,7 @@ const Controls = ({
 
             <div className="pt-2">
               <label className="text-xs text-gray-500">Rotaciones por defecto</label>
-              <select className="mt-1 w-full border border-gray-200 rounded px-3 py-2 text-sm">
+              <select disabled={isSpinning} className="mt-1 w-full border border-gray-200 rounded px-3 py-2 text-sm">
                 <option>8</option>
                 <option selected>20</option>
                 <option>30</option>
@@ -644,13 +757,13 @@ const Controls = ({
       {/* Botones de acción */}
       <div className="flex flex-col gap-3">
         {settings?.enableExample !== false && (
-          <button onClick={handleAddExample} className="flex items-center justify-center gap-2 bg-white border border-gray-200 text-blue-600 px-4 py-3 rounded-xl text-sm font-medium hover:bg-blue-50 transition-colors">
+          <button onClick={() => { if (!isSpinning) handleAddExample() }} disabled={isSpinning} className={`flex items-center justify-center gap-2 bg-white border border-gray-200 text-blue-600 px-4 py-3 rounded-xl text-sm font-medium ${isSpinning ? 'opacity-60 cursor-not-allowed' : 'hover:bg-blue-50 transition-colors'}`}>
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
             Ejemplo
           </button>
         )}
         {settings?.enableClear !== false && (
-          <button onClick={handleClear} className="flex items-center justify-center gap-2 bg-white border border-gray-200 text-red-600 px-4 py-3 rounded-xl text-sm font-medium hover:bg-red-50 transition-colors">
+          <button onClick={() => { if (!isSpinning) handleClear() }} disabled={isSpinning} className={`flex items-center justify-center gap-2 bg-white border border-gray-200 text-red-600 px-4 py-3 rounded-xl text-sm font-medium ${isSpinning ? 'opacity-60 cursor-not-allowed' : 'hover:bg-red-50 transition-colors'}`}>
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
             Limpiar
           </button>

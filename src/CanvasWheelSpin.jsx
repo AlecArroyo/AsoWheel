@@ -40,7 +40,7 @@ const DEFAULT_CONFIG = {
   labelMaxCharsBase: 40,
 }
 
-export default function CanvasWheelSpin({ items = [], winningIndex, onSpinEnd, config = {} }) {
+export default function CanvasWheelSpin({ items = [], winningIndex, onSpinEnd, onSpinStart, config = {} }) {
   const canvasRef = useRef(null)
   const offscreenRef = useRef(null)
   const rafRef = useRef(null)
@@ -209,7 +209,8 @@ export default function CanvasWheelSpin({ items = [], winningIndex, onSpinEnd, c
     const start = performance.now()
     const startAngle = 0
 
-    // show label only during animation to simulate 'names passing by'
+    // notify parent that the spin is starting and show label during animation
+    try { if (typeof onSpinStart === 'function') onSpinStart() } catch (e) { /* ignore */ }
     if (pointerLabelRef.current) pointerLabelRef.current.style.visibility = 'visible'
     animationRef.current.running = true
 
