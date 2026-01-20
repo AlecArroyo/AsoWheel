@@ -390,7 +390,7 @@ export default function App() {
                 className="bg-white/90 backdrop-blur-sm border flex justify-center border-gray-200 p-2 rounded-full mx-5 my-5 backdrop-blur-3xl text-neutral-400 shadow-sm hover:scale-105 transition-transform "
               >
                 <span className='material-symbols-outlined mx-0.5'>{showSizeControls ? 'close' : 'linear_scale'}</span>
-                <p className='text-sm font-regular m-0.5'>{showSizeControls ? 'cerrar' : 'Tamaño '}</p> 
+                <p className='text-sm font-regular m-0.5'>{showSizeControls ? 'cerrar' : 'Ajustar '}</p> 
               </button>
 
               {showSizeControls && (

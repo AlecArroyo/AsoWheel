@@ -66,8 +66,8 @@ export default function CanvasWheelSpin({ items = [], winningIndex, onSpinEnd, o
     const normalize = (a) => {
       // Normalize to [-PI, PI)
       const TWO_PI = Math.PI * 2
-      let v = ((a + Math.PI) % TWO_PI) - Math.PI
-      if (v < -Math.PI) v += TWO_PI
+      // Use a safe modulo that works with negative values in JS
+      let v = ((a + Math.PI + TWO_PI) % TWO_PI) - Math.PI
       return v
     }
 
@@ -263,23 +263,11 @@ export default function CanvasWheelSpin({ items = [], winningIndex, onSpinEnd, o
         // Asegurar etiqueta final y calcular índice final de forma más robusta
         let finalIdx = 0
         try {
-          // Normalize the target angle into -2PI..2PI to avoid floating point errors
-          const TWO_PI = Math.PI * 2
-          const norm = mod(totalTarget, TWO_PI)
-          finalIdx = angleToIndex(norm, n, anglePer)
+          // Compute final index directly from the totalTarget rotation. Using the
+          // raw `totalTarget` avoids edge cases introduced by modulo normalization
+          // and guarantees we evaluate the same angle that was used to draw the wheel.
+          finalIdx = angleToIndex(totalTarget, n, anglePer)
           if (pointerLabelRef.current) pointerLabelRef.current.textContent = items[finalIdx] ?? ''
-
-          // Fallback: if label text maps to a different index (rare rounding cases), prefer it
-          try {
-            const labelText = pointerLabelRef.current?.textContent ?? ''
-            if (labelText) {
-              const labelIdx = items.findIndex(it => String(it) === String(labelText))
-              if (labelIdx >= 0 && labelIdx !== finalIdx) {
-                finalIdx = labelIdx
-                if (pointerLabelRef.current) pointerLabelRef.current.textContent = items[finalIdx] ?? ''
-              }
-            }
-          } catch (e) { /* ignore */ }
         } catch (err) { /* ignore */ }
 
         // Parpadeo del slice ganador antes de notificar el fin (~1s)
