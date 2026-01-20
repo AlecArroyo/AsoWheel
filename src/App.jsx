@@ -60,13 +60,7 @@ const GlobalStyles = () => (
 const Header = () => (
   <header className="absolute top-0 left-0 p-8">
     <div className="flex items-center gap-2">
-      <div className="flex items-center gap-1">
-        <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-        <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-        <div className="w-3 h-3 bg-orange-400 rounded-full"></div>
-      </div>
-      <span className="text-2xl font-bold text-blue-600">asohp</span>
-      <span className="text-sm text-gray-500">Sorteos</span>
+      <img src="https://asohp.cr/public/images/asohp-logo-nav.png" alt="AsoHp" />
     </div>
   </header>
 );
@@ -94,6 +88,13 @@ export default function App() {
 
   const [winningIndex, setWinningIndex] = useState(null);
 
+  // Ajustes configurables de la aplicación
+  const [settings, setSettings] = useState({
+    claimTime: 15, // segundos para reclamar (por defecto 15)
+    enableClear: true,
+    enableExample: true,
+    enableSearch: true
+  });
   // Responsive wheel sizing: reference to the container and current wheel size in px
   const wheelContainerRef = useRef(null)
   const [wheelSize, setWheelSize] = useState(480)
@@ -346,6 +347,8 @@ export default function App() {
           participantCount={participants.length}
           winners={winners}
           setWinners={setWinners}
+          settings={settings}
+          setSettings={setSettings}
         />
       </div>
 
@@ -355,6 +358,7 @@ export default function App() {
         winner={winner}
         onPresent={handlePresent}
         onClose={() => setShowModal(false)}
+        claimTime={settings.claimTime}
       />
     </div>
   );
@@ -367,14 +371,14 @@ export default function App() {
  * Contiene una cuenta regresiva y opciones para marcar como presente.
  * @param {{show: boolean, winner: string, onPresent: Function, onClose: Function}} props
  */
-const WinnerModal = ({ show, winner, onPresent, onClose }) => {
-  const [countdown, setCountdown] = useState(15);
+const WinnerModal = ({ show, winner, onPresent, onClose, claimTime = 15 }) => {
+  const [countdown, setCountdown] = useState(claimTime);
   const [timedOut, setTimedOut] = useState(false);
 
   useEffect(() => {
     if (!show || !winner) return;
 
-    setCountdown(15);
+    setCountdown(claimTime);
     setTimedOut(false);
 
     const interval = setInterval(() => {
@@ -389,7 +393,7 @@ const WinnerModal = ({ show, winner, onPresent, onClose }) => {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [show, winner]);
+  }, [show, winner, claimTime]);
 
   // If modal should not show, render nothing
   if (!show) return null;
@@ -406,8 +410,12 @@ const WinnerModal = ({ show, winner, onPresent, onClose }) => {
       >
         {/* Left column: congratulations and name */}
         <div className="flex-1 pl-4 pr-2.5 py-6">
-          <div className="text-sm text-gray-600 mb-4"> ¡Muchas Felicidades!</div>
-          <div className="text-7xl font-extrabold leading-tight mb-8">{winner}</div>
+
+          <div className="text-xl text-gray-600 mb-4">
+            {/* <img className="scale-60 h-100 m-0 p-3" src="https://img.freepik.com/free-vector/trophy_78370-345.jpg" alt="" /> */}
+            <p>¡Felicidades!</p>
+          </div>
+          <div className="text-6xl font-extrabold leading-tight mb-8">{winner}</div>
 
           <div className="mt-6">
             <button
@@ -421,13 +429,13 @@ const WinnerModal = ({ show, winner, onPresent, onClose }) => {
         </div>
 
         {/* Right column: time info */}
-        <div className="w-1/3 flex flex-col items-center justify-center px-8 py-6">
+        <div className="w-1/3 flex flex-col items-center justify-center px-2.5 py-6">
           <div className="text-sm text-gray-600 mb-2">Tiempo:</div>
           {!timedOut ? (
-            <div className="text-6xl font-extrabold text-black">{countdown}</div>
+            <div className="text-9xl  font-extrabold text-black">{countdown}</div>
           ) : (
             <div className="text-center">
-              <div className="text-3xl font-extrabold text-red-600 mb-2">¡Se Acabó el tiempo!</div>
+              <div className="text-5xl font-extrabold text-red-600 mb-2">¡Se Acabó el tiempo!</div>
               <div className="text-sm text-red-400">¡Atento al tiempo la próxima vez!</div>
             </div>
           )}
@@ -465,7 +473,9 @@ const Controls = ({
   setParticipantsText,
   participantCount,
   winners,
-  setWinners
+  setWinners,
+  settings,
+  setSettings
 }) => {
   // Estado para la pestaña activa (participantes, ganadores).
   const [activeTab, setActiveTab] = useState('participantes');
@@ -519,15 +529,19 @@ const Controls = ({
       </div>
 
       <div className="relative mb-6">
-        {/* Barra de búsqueda */}
-        <input
-          type="text"
-          placeholder="Buscar..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full bg-white border border-gray-300 rounded-full py-3 pl-11 pr-4 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent text-sm"
-        />
-        <svg className="w-5 h-5 text-gray-400 absolute top-1/2 left-4 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        {/* Barra de búsqueda (puede desactivarse desde ajustes) */}
+        {settings?.enableSearch !== false && (
+          <>
+            <input
+              type="text"
+              placeholder="Buscar..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full bg-white border border-gray-300 rounded-full py-3 pl-11 pr-4 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent text-sm"
+            />
+            <svg className="w-5 h-5 text-gray-400 absolute top-1/2 left-4 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+          </>
+        )}
       </div>
 
       {/* Contenido de las pestañas */}
@@ -573,14 +587,48 @@ const Controls = ({
         {activeTab === 'settings' && (
           <div className="text-sm p-2 space-y-3">
             <h3 className="text-lg font-medium text-gray-700 mb-2">Ajustes</h3>
+
+            <div className="flex items-center justify-between">
+              <label className="text-sm text-gray-600">Tiempo de reclamo (segundos)</label>
+              <input
+                type="number"
+                min={1}
+                value={settings?.claimTime ?? 15}
+                onChange={(e) => setSettings(prev => ({ ...prev, claimTime: Math.max(1, Number(e.target.value)) }))}
+                className="w-20 px-2 py-1 border rounded text-sm"
+              />
+            </div>
+
             <label className="flex items-center gap-3">
-              <input type="checkbox" className="w-4 h-4" />
-              <span className="text-gray-600 text-sm">Quitar ganador automáticamente al confirmar</span>
+              <input
+                type="checkbox"
+                className="w-4 h-4"
+                checked={settings?.enableClear !== false}
+                onChange={(e) => setSettings(prev => ({ ...prev, enableClear: e.target.checked }))}
+              />
+              <span className="text-gray-600 text-sm">Habilitar botón "Limpiar"</span>
             </label>
+
             <label className="flex items-center gap-3">
-              <input type="checkbox" className="w-4 h-4" />
-              <span className="text-gray-600 text-sm">Reproducir sonido al elegir ganador</span>
+              <input
+                type="checkbox"
+                className="w-4 h-4"
+                checked={settings?.enableExample !== false}
+                onChange={(e) => setSettings(prev => ({ ...prev, enableExample: e.target.checked }))}
+              />
+              <span className="text-gray-600 text-sm">Habilitar botón "Ejemplo"</span>
             </label>
+
+            <label className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                className="w-4 h-4"
+                checked={settings?.enableSearch !== false}
+                onChange={(e) => setSettings(prev => ({ ...prev, enableSearch: e.target.checked }))}
+              />
+              <span className="text-gray-600 text-sm">Habilitar barra de "Buscar"</span>
+            </label>
+
             <div className="pt-2">
               <label className="text-xs text-gray-500">Rotaciones por defecto</label>
               <select className="mt-1 w-full border border-gray-200 rounded px-3 py-2 text-sm">
@@ -595,14 +643,18 @@ const Controls = ({
 
       {/* Botones de acción */}
       <div className="flex flex-col gap-3">
-        <button onClick={handleAddExample} className="flex items-center justify-center gap-2 bg-white border border-gray-200 text-blue-600 px-4 py-3 rounded-xl text-sm font-medium hover:bg-blue-50 transition-colors">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
-          Ejemplo
-        </button>
-        <button onClick={handleClear} className="flex items-center justify-center gap-2 bg-white border border-gray-200 text-red-600 px-4 py-3 rounded-xl text-sm font-medium hover:bg-red-50 transition-colors">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-          Limpiar
-        </button>
+        {settings?.enableExample !== false && (
+          <button onClick={handleAddExample} className="flex items-center justify-center gap-2 bg-white border border-gray-200 text-blue-600 px-4 py-3 rounded-xl text-sm font-medium hover:bg-blue-50 transition-colors">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
+            Ejemplo
+          </button>
+        )}
+        {settings?.enableClear !== false && (
+          <button onClick={handleClear} className="flex items-center justify-center gap-2 bg-white border border-gray-200 text-red-600 px-4 py-3 rounded-xl text-sm font-medium hover:bg-red-50 transition-colors">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+            Limpiar
+          </button>
+        )}
       </div>
     </div>
   );
