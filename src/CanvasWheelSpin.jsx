@@ -29,7 +29,7 @@ import { useEffect, useRef } from 'react'
 const DEFAULT_CONFIG = {
   size: 200,
   pointerSize: 24,
-  colors: ['#fde68a', '#bfdbfe', '#bbf7d0', '#fecaca', '#ddd6fe'],
+  colors: ['#FA8500', '#3481CF', '#FFF'],
   duration: 8000,
   rotations: 20,
   dprMax: 2,
@@ -141,8 +141,18 @@ export default function CanvasWheelSpin({ items = [], winningIndex, onSpinEnd, o
         const mid = start + anglePer / 2
         ctx.rotate(mid)
         // Calcular tamaño de fuente adaptativo
-        const fontSize = Math.max(7, Math.min(14, (radius * 0.09) * Math.min(1, 40 / n)))
-        ctx.font = `${fontSize}px Poppins, sans-serif`
+        const fontSize = Math.max(7, Math.min(16, (radius * 0.09) * Math.min(1, 40 / n)))
+        // Leer la fuente principal desde la variable CSS `--app-font` para
+        // mantener la app flexible: cambiar la variable cambia todos los textos
+        // incluyendo el canvas (que no hereda CSS automáticamente).
+        let appFont = 'Sanchez, serif'
+        try {
+          const raw = getComputedStyle(document.documentElement).getPropertyValue('--app-font') || ''
+          appFont = raw.trim() || appFont
+        } catch (e) {
+          // en entornos sin window/document (SSR) queda el fallback
+        }
+        ctx.font = `${fontSize}px ${appFont}`
         ctx.fillStyle = '#1f2937'
         ctx.textAlign = 'right'
         ctx.textBaseline = 'middle'

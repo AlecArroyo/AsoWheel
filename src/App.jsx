@@ -60,7 +60,7 @@ const GlobalStyles = () => (
  */
 const Header = () => (
   <header className="absolute top-0 left-0 p-8">
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 sm:scale-50 md:scale-75 lg:scale-100">
       <img src="https://asohp.cr/public/images/asohp-logo-nav.png" alt="AsoHp" />
     </div>
   </header>
@@ -296,7 +296,7 @@ export default function App() {
   // --- Renderizado del Componente ---
 
   return (
-    <div className="flex flex-col md:flex-row h-screen relative" style={{ fontFamily: 'Poppins, sans-serif' }}>
+    <div className="flex flex-col md:flex-row h-screen relative" style={{ fontFamily: 'var(--app-font)' }}>
       <GlobalStyles />
       <FestiveBackground />
       <Header />

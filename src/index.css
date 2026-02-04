@@ -1,8 +1,26 @@
 @import "tailwindcss";
 
-/* Global font fallback: aseguramos que la app use Poppins cuando esté cargada */
+/* Variable central para la fuente de la app: cambia aquí para alterar
+   la fuente en toda la aplicación sin tocar código JS. */
+:root {
+  --app-font: 'Sanchez', serif;
+}
+
+.sanchez-regular {
+  font-family: "Sanchez", serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.sanchez-regular-italic {
+  font-family: "Sanchez", serif;
+  font-weight: 400;
+  font-style: italic;
+}
+
+/* Usar la variable por defecto para que sea fácil cambiar la fuente global */
 body {
-	font-family: 'Poppins', sans-serif;
+  font-family: var(--app-font);
 }
 
 .material-symbols-outlined {
