@@ -355,28 +355,42 @@ export default function App() {
         }
 
         return (
-              <div
-                role="status"
-                aria-live="polite"
-                className={
-                  `fixed bottom-10 left-10 z-[60] opacity-70 backdrop-blur-lg px-3.5 py-2.5 rounded-sm shadow-[0_6px_18px_rgba(6,95,70,0.08)] font-medium transition-all text-md ` +
-                  (notificationType === 'absent'
-                    ? 'bg-red-100 text-red-800 shadow-[0_6px_18px_rgba(127,29,29,0.08)]'
-                    : notificationType === 'present'
-                      ? 'bg-green-100 text-green-800 shadow-[0_6px_18px_rgba(6,95,70,0.08)]'
-                      : 'bg-blue-100 text-blue-800 shadow-[0_6px_18px_rgba(29,78,216,0.08)]')
-                }
-                style={{
-                  transform,
-                  opacity,
-                  transition,
-                }}
-              >
-                {notification}
-              </div>
+          <div
+            role="status"
+            aria-live="polite"
+            className={
+              `fixed bottom-7 left-8 z-[60] opacity-70 backdrop-blur-lg px-4 py-3 rounded-sm shadow-[0_6px_18px_rgba(6,95,70,0.08)] font-medium transition-all text-md ` +
+              (notificationType === 'absent'
+                ? 'bg-red-100 text-red-800 shadow-[0_6px_18px_rgba(127,29,29,0.08)]'
+                : notificationType === 'present'
+                  ? 'bg-green-100 text-green-800 shadow-[0_6px_18px_rgba(6,95,70,0.08)]'
+                  : 'bg-blue-100 text-blue-800 shadow-[0_6px_18px_rgba(29,78,216,0.08)]')
+            }
+            style={{
+              transform,
+              opacity,
+              transition,
+            }}
+          >
+            {notification}
+          </div>
 
         );
       })()}
+
+      <div style={{ position: 'absolute', bottom: 10, left: 15, zIndex: 30 }}>
+        <button
+          aria-label={'Información'}
+          title={'Información'}
+          onClick={() => { if (!isSpinning) setShowInfo(true) }}
+          role="button"
+          aria-disabled={isSpinning}
+          className="bg-white/90 backdrop-blur-sm border flex justify-center border-gray-200 p-2 rounded-full mx-5 my-5 backdrop-blur-3xl text-neutral-400 shadow-sm hover:scale-105 transition-transform "
+        >
+          <span className='material-symbols-outlined mx-0.5'>Info</span>
+        </button>
+      </div>
+
 
       {/* Contenedor principal para la ruleta */}
       <div className="w-full md:w-2/3 flex flex-col items-center justify-center relative z-10 px-4 md:px-0">
@@ -413,7 +427,7 @@ export default function App() {
                 className="bg-white/90 backdrop-blur-sm border flex justify-center border-gray-200 p-2 rounded-full mx-5 my-5 backdrop-blur-3xl text-neutral-400 shadow-sm hover:scale-105 transition-transform "
               >
                 <span className='material-symbols-outlined mx-0.5'>{showSizeControls ? 'close' : 'linear_scale'}</span>
-                <p className='text-sm font-regular m-0.5'>{showSizeControls ? 'cerrar' : 'Ajustar '}</p>
+                <p className='text-sm font-regular m-0.5'>{showSizeControls ? 'cerrar' : 'Tamaño '}</p>
               </button>
 
               {showSizeControls && (
@@ -454,18 +468,7 @@ export default function App() {
             </div>
 
             {/* Boton de informacion, muestra un modal con la info de la app */}
-            <div style={{ position: 'absolute', bottom: 8, right: 8, zIndex: 30 }}>
-              <button
-                aria-label={'Información'}
-                title={'Información'}
-                onClick={() => { if (!isSpinning) setShowInfo(true) }}
-                role="button"
-                aria-disabled={isSpinning}
-                className="bg-white/90 backdrop-blur-sm border flex justify-center border-gray-200 p-2 rounded-full mx-5 my-5 backdrop-blur-3xl text-neutral-400 shadow-sm hover:scale-105 transition-transform "
-              >
-                <span className='material-symbols-outlined mx-0.5'>Info</span>
-              </button>
-            </div>
+
 
             <button
               onClick={handleSpin}
@@ -686,7 +689,7 @@ const Controls = ({
         <button onClick={() => setActiveTab('ausentes')} className={`px-5 py-2 rounded-full text-sm font-medium transition-colors ${activeTab === 'ausentes' ? 'bg-blue-200 text-blue-800' : 'text-gray-500 hover:bg-gray-200'}`}>
           Ausentes <span className="bg-red-500 text-white rounded-full px-2.5 py-0.5 ml-2 text-xs">{absentees.length}</span>
         </button>
-        
+
       </div>
 
       <div className="relative mb-6">
@@ -710,13 +713,13 @@ const Controls = ({
       <div className="bg-white rounded-2xl p-4 flex-1 border border-gray-200 mb-6 overflow-y-auto flex flex-col">
         {activeTab === 'participantes' && (
           <>
-            <label className="text-sm text-gray-600 mb-2 font-medium">Lista (uno por línea):</label>
-            <textarea
+            <label className="text-sm text-gray-600 mb-2 font-bold">Lista (uno por línea):</label>
+            <textarea 
               value={participantsText}
               onChange={(e) => { if (!isSpinning) setParticipantsText(e.target.value) }}
               disabled={isSpinning}
               placeholder="Escribe un nombre por línea...&#10;Ejemplo:&#10;Juan&#10;María&#10;Pedro"
-              className="flex-1 w-full resize-none focus:outline-none text-sm font-mono p-2 border border-gray-200 rounded-lg"
+              className="flex-1 w-full resize-none focus:outline-none text-sm font-extralight text-neutral-600 p-2 border border-gray-200 rounded-lg"
             />
             <div className="mt-2 text-xs text-gray-500">
               {participantCount} participante{participantCount !== 1 ? 's' : ''}
@@ -743,14 +746,14 @@ const Controls = ({
         {activeTab === 'ganadores' && (
           <ul className="text-sm space-y-2 p-2">
             {filteredWinners.length > 0 ? filteredWinners.map((r, i) => (
-              <li key={i} className="text-green-600 font-medium">✔ {r}</li>
+              <li key={i} className="text-green-600 font-medium text-lg">✔ {r}</li>
             )) : <p className="text-gray-500">No hay ganadores.</p>}
           </ul>
         )}
         {activeTab === 'ausentes' && (
           <ul className="text-sm space-y-2 p-2">
             {filteredAbsentees.length > 0 ? filteredAbsentees.map((r, i) => (
-              <li key={i} className="text-red-600 font-medium">✖ {r}</li>
+              <li key={i} className="text-red-600 font-medium text-lg">✖ {r}</li>
             )) : <p className="text-gray-500">No hay ausentes.</p>}
           </ul>
         )}
@@ -814,7 +817,7 @@ const Controls = ({
       {/* Botones de acción */}
       <div className="flex flex-col gap-3">
         {settings?.enableExample !== false && (
-          <button onClick={() => { if (!isSpinning) handleAddExample() }} disabled={isSpinning} className={`flex items-center justify-center gap-2 bg-white border border-gray-200 text-blue-600 px-4 py-3 rounded-xl text-sm font-extrabold ${isSpinning ? 'opacity-60 cursor-not-allowed' : 'hover:bg-blue-50 transition-colors'}`}>
+          <button onClick={() => { if (!isSpinning) handleAddExample() }} disabled={isSpinning} className={`flex items-center justify-center gap-2 bg-white border border-gray-200 text-blue-600 px-4 py-3 rounded-xl text-sm font-medium ${isSpinning ? 'opacity-60 cursor-not-allowed' : 'hover:bg-blue-50 transition-colors'}`}>
             <svg className="w-5 h-5 font-medium" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
             Ejemplo
           </button>

@@ -3,11 +3,11 @@
 /* Variable central para la fuente de la app: cambia aquí para alterar
    la fuente en toda la aplicación sin tocar código JS. */
 :root {
-  --app-font: 'Sanchez', serif;
+  --app-font: 'Google Sans', serif;
 }
 
 .sanchez-regular {
-  font-family: "Sanchez", serif;
+  font-family: "Google Sans", serif;
   font-weight: 400;
   font-style: normal;
 }

@@ -28,7 +28,11 @@ export default function InfoModal({ show, onClose }) {
 
       <div className="relative bg-white rounded-2xl w-[94%] max-w-3xl p-6 shadow-2xl" style={{ maxHeight: '86vh', overflow: 'auto', animation: 'modalPop 420ms cubic-bezier(.2,.8,.2,1)' }}>
         <div className="flex items-start justify-between gap-4 mb-4">
-          <h2 className="text-xl font-semibold text-gray-800">Información sobre el sorteo</h2>
+          <div className='mb-5'>
+            <h2 className="text-xl font-semibold text-gray-800">Información sobre el sorteo</h2>
+           <h3 className="text-sm font-medium text-gray-500">Haga click en cada pestaña para ver informacion</h3>
+          </div>
+          
           <button aria-label="Cerrar" onClick={onClose} className="text-gray-500 hover:text-gray-700">✕</button>
         </div>
 
