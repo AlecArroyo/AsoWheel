@@ -87,6 +87,9 @@ export default function App() {
   // Estado para la lista de ganadores.
   const [winners, setWinners] = useState([]);
 
+  // Estado para la lista de ausentes (ganadores que no reclaman)
+  const [absentees, setAbsentees] = useState([]);
+
   const [winningIndex, setWinningIndex] = useState(null);
 
   // Bandera que indica si la ruleta está girando. Usada para deshabilitar controles/zoom.
@@ -94,6 +97,8 @@ export default function App() {
 
   // Notification state for subtle toasts (used when confirming presence)
   const [notification, setNotification] = useState(null);
+  // Tipo de notificación para variar estilo: 'info' | 'present' | 'absent'
+  const [notificationType, setNotificationType] = useState('info');
   // Stage for toast animation: 'idle' | 'pre-enter' | 'entering' | 'visible' | 'exiting'
   const [notificationStage, setNotificationStage] = useState('idle');
   // Mini configuration (JSON) for animation directions/durations/easings
@@ -285,9 +290,28 @@ export default function App() {
     setWinners(prev => (prev.includes(winner) ? prev : [...prev, winner])); // Añade solo si no existe.
     // Mostrar notificación sutil indicando el añadido exitoso
     setNotification(`¡Presencia Confirmada!`);
+    setNotificationType('present');
     removeWinnerFromParticipants(winner);  // Lo elimina de la lista de participantes.
     setShowModal(false);                   // Oculta el modal.
     setWinner(null);                       // Limpia el estado del ganador.
+  };
+
+  /**
+   * Maneja cuando un ganador no reclama a tiempo: lo marca como ausente.
+   * @param {string} winnerName
+   */
+  const handleTimeout = (winnerName) => {
+    if (!winnerName) return;
+    // Añadir a ausentes evitando duplicados
+    setAbsentees(prev => (prev.includes(winnerName) ? prev : [...prev, winnerName]));
+    // Eliminar también de participantes para evitar que vuelva a salir
+    removeWinnerFromParticipants(winnerName);
+    // Mostrar notificación indicando que está ausente
+    setNotification(`${winnerName} está ausente`);
+    setNotificationType('absent');
+    // Cerrar modal y limpiar estado del ganador
+    setShowModal(false);
+    setWinner(null);
   };
 
 
@@ -331,29 +355,25 @@ export default function App() {
         }
 
         return (
-          <div
-            role="status"
-            aria-live="polite"
-            className="
-    fixed bottom-10 left-10 z-[60]
-    bg-green-100 text-green-800
-    opacity-70
-    backdrop-blur-lg
-    px-3.5 py-2.5
-    rounded-sm
-    shadow-[0_6px_18px_rgba(6,95,70,0.08)]
-    font-medium
-    transition-all
-    text-md
-  "
-            style={{
-              transform,
-              opacity,
-              transition,
-            }}
-          >
-            {notification}
-          </div>
+              <div
+                role="status"
+                aria-live="polite"
+                className={
+                  `fixed bottom-10 left-10 z-[60] opacity-70 backdrop-blur-lg px-3.5 py-2.5 rounded-sm shadow-[0_6px_18px_rgba(6,95,70,0.08)] font-medium transition-all text-md ` +
+                  (notificationType === 'absent'
+                    ? 'bg-red-100 text-red-800 shadow-[0_6px_18px_rgba(127,29,29,0.08)]'
+                    : notificationType === 'present'
+                      ? 'bg-green-100 text-green-800 shadow-[0_6px_18px_rgba(6,95,70,0.08)]'
+                      : 'bg-blue-100 text-blue-800 shadow-[0_6px_18px_rgba(29,78,216,0.08)]')
+                }
+                style={{
+                  transform,
+                  opacity,
+                  transition,
+                }}
+              >
+                {notification}
+              </div>
 
         );
       })()}
@@ -393,7 +413,7 @@ export default function App() {
                 className="bg-white/90 backdrop-blur-sm border flex justify-center border-gray-200 p-2 rounded-full mx-5 my-5 backdrop-blur-3xl text-neutral-400 shadow-sm hover:scale-105 transition-transform "
               >
                 <span className='material-symbols-outlined mx-0.5'>{showSizeControls ? 'close' : 'linear_scale'}</span>
-                <p className='text-sm font-regular m-0.5'>{showSizeControls ? 'cerrar' : 'Ajustar '}</p> 
+                <p className='text-sm font-regular m-0.5'>{showSizeControls ? 'cerrar' : 'Ajustar '}</p>
               </button>
 
               {showSizeControls && (
@@ -473,6 +493,8 @@ export default function App() {
           participantCount={participants.length}
           winners={winners}
           setWinners={setWinners}
+          absentees={absentees}
+          setAbsentees={setAbsentees}
           settings={settings}
           setSettings={setSettings}
           isSpinning={isSpinning}
@@ -488,6 +510,7 @@ export default function App() {
         onPresent={handlePresent}
         onClose={() => setShowModal(false)}
         claimTime={settings.claimTime}
+        onTimeout={handleTimeout}
       />
     </div>
   );
@@ -500,7 +523,7 @@ export default function App() {
  * Contiene una cuenta regresiva y opciones para marcar como presente.
  * @param {{show: boolean, winner: string, onPresent: Function, onClose: Function}} props
  */
-const WinnerModal = ({ show, winner, onPresent, onClose, claimTime = 15 }) => {
+const WinnerModal = ({ show, winner, onPresent, onClose, claimTime = 15, onTimeout }) => {
   const [countdown, setCountdown] = useState(claimTime);
   const [timedOut, setTimedOut] = useState(false);
 
@@ -573,7 +596,7 @@ const WinnerModal = ({ show, winner, onPresent, onClose, claimTime = 15 }) => {
         {/* Bottom-right link to continue (only visible after timeout) */}
         <div style={{ position: 'absolute', right: 32, bottom: 28 }}>
           {timedOut && (
-            <button onClick={onClose} className="text-sm text-gray-800 flex items-center gap-2 hover:underline">
+            <button onClick={() => { if (typeof onTimeout === 'function') onTimeout(winner); else if (typeof onClose === 'function') onClose(); }} className="text-sm text-gray-800 flex items-center gap-2 hover:underline">
               Continuar con el sorteo <span style={{ transform: 'translateY(2px)' }}>→</span>
             </button>
           )}
@@ -603,6 +626,8 @@ const Controls = ({
   participantCount,
   winners,
   setWinners,
+  absentees,
+  setAbsentees,
   settings,
   setSettings,
   isSpinning
@@ -617,16 +642,24 @@ const Controls = ({
       setParticipantsText('');
       // Also clear winners when user clears the participants list
       if (typeof setWinners === 'function') setWinners([]);
+      // Also clear ausentes when clearing participants
+      if (typeof setAbsentees === 'function') setAbsentees([]);
     }
   };
 
   const handleAddExample = () => {
+    // Si ya hay participantes, advertir que se reemplazará el sorteo actual
+    if (participantsText && participantsText.trim().length > 0) {
+      const ok = window.confirm('Hay participantes actuales. Esta acción reemplazará el sorteo y borrará los participantes actuales. ¿Deseas continuar?');
+      if (!ok) return;
+    }
     setParticipantsText('Pablo\nNathan\nSofia\nJenna\nSam\nAlex\nMaria\nCarlos');
   };
 
   // Filtra las listas según el término de búsqueda.
   const filteredWinners = winners.filter(r => r.toLowerCase().includes(searchTerm.toLowerCase()));
   const filteredParticipants = (participants || []).filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
+  const filteredAbsentees = (absentees || []).filter(a => a.toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
     <div className="flex flex-col h-full">
@@ -644,18 +677,16 @@ const Controls = ({
 
       {/* Navegación por pestañas */}
       <div className="flex gap-3 mb-6">
-        <button
-          onClick={() => setActiveTab('participantes')}
-          className={`px-5 py-2 rounded-full text-sm font-medium transition-colors ${activeTab === 'participantes' ? 'bg-blue-200 text-blue-800' : 'text-gray-500 hover:bg-gray-200'}`}
-        >
+        <button onClick={() => setActiveTab('participantes')} className={`px-5 py-2 rounded-full text-sm font-medium transition-colors ${activeTab === 'participantes' ? 'bg-blue-200 text-blue-800' : 'text-gray-500 hover:bg-gray-200'}`}>
           Participantes <span className="bg-blue-500 text-white rounded-full px-2.5 py-0.5 ml-2 text-xs">{participantCount}</span>
         </button>
-        <button
-          onClick={() => setActiveTab('ganadores')}
-          className={`px-5 py-2 rounded-full text-sm font-medium transition-colors ${activeTab === 'ganadores' ? 'bg-blue-200 text-blue-800' : 'text-gray-500 hover:bg-gray-200'}`}
-        >
+        <button onClick={() => setActiveTab('ganadores')} className={`px-5 py-2 rounded-full text-sm font-medium transition-colors ${activeTab === 'ganadores' ? 'bg-blue-200 text-blue-800' : 'text-gray-500 hover:bg-gray-200'}`}>
           Ganadores <span className="bg-green-500 text-white rounded-full px-2.5 py-0.5 ml-2 text-xs">{winners.length}</span>
         </button>
+        <button onClick={() => setActiveTab('ausentes')} className={`px-5 py-2 rounded-full text-sm font-medium transition-colors ${activeTab === 'ausentes' ? 'bg-blue-200 text-blue-800' : 'text-gray-500 hover:bg-gray-200'}`}>
+          Ausentes <span className="bg-red-500 text-white rounded-full px-2.5 py-0.5 ml-2 text-xs">{absentees.length}</span>
+        </button>
+        
       </div>
 
       <div className="relative mb-6">
@@ -714,6 +745,13 @@ const Controls = ({
             {filteredWinners.length > 0 ? filteredWinners.map((r, i) => (
               <li key={i} className="text-green-600 font-medium">✔ {r}</li>
             )) : <p className="text-gray-500">No hay ganadores.</p>}
+          </ul>
+        )}
+        {activeTab === 'ausentes' && (
+          <ul className="text-sm space-y-2 p-2">
+            {filteredAbsentees.length > 0 ? filteredAbsentees.map((r, i) => (
+              <li key={i} className="text-red-600 font-medium">✖ {r}</li>
+            )) : <p className="text-gray-500">No hay ausentes.</p>}
           </ul>
         )}
         {activeTab === 'settings' && (
@@ -776,8 +814,8 @@ const Controls = ({
       {/* Botones de acción */}
       <div className="flex flex-col gap-3">
         {settings?.enableExample !== false && (
-          <button onClick={() => { if (!isSpinning) handleAddExample() }} disabled={isSpinning} className={`flex items-center justify-center gap-2 bg-white border border-gray-200 text-blue-600 px-4 py-3 rounded-xl text-sm font-medium ${isSpinning ? 'opacity-60 cursor-not-allowed' : 'hover:bg-blue-50 transition-colors'}`}>
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
+          <button onClick={() => { if (!isSpinning) handleAddExample() }} disabled={isSpinning} className={`flex items-center justify-center gap-2 bg-white border border-gray-200 text-blue-600 px-4 py-3 rounded-xl text-sm font-extrabold ${isSpinning ? 'opacity-60 cursor-not-allowed' : 'hover:bg-blue-50 transition-colors'}`}>
+            <svg className="w-5 h-5 font-medium" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
             Ejemplo
           </button>
         )}
