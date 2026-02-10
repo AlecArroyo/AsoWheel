@@ -59,8 +59,8 @@ const GlobalStyles = () => (
  * Componente de encabezado simple.
  */
 const Header = () => (
-  <header className="absolute top-0 left-0 p-8">
-    <div className="flex items-center gap-2 sm:scale-50 md:scale-75 lg:scale-100">
+  <header className="absolute top-0 left-0 p-4">
+    <div className="flex items-center gap-2 sm:scale-40 md:scale-70 lg:scale-80">
       <img src="https://asohp.cr/public/images/asohp-logo-nav.png" alt="AsoHp" />
     </div>
   </header>
@@ -641,7 +641,7 @@ const Controls = ({
   const [searchTerm, setSearchTerm] = useState('');
 
   const handleClear = () => {
-    if (window.confirm('¿Estás seguro de que quieres borrar todos los participantes?')) {
+    if (window.confirm('¿Estás seguro de que quieres borrar todos los participantes? Lo lista de de ganadores y ausentes tambien se borrará')) {
       setParticipantsText('');
       // Also clear winners when user clears the participants list
       if (typeof setWinners === 'function') setWinners([]);

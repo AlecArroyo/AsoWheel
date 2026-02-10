@@ -55,6 +55,7 @@ export default function CanvasWheelSpin({ items = [], winningIndex, onSpinEnd, o
   const forceShowLabels = cfg.showLabelsWhenLessThan === Infinity || cfg.forceShowLabels
   const pointerLabelRef = useRef(null)
   const blinkTimersRef = useRef([])
+  const centerImgRef = useRef(null)
 
   // Helpers
   const mod = (x, m) => ((x % m) + m) % m
@@ -135,32 +136,32 @@ export default function CanvasWheelSpin({ items = [], winningIndex, onSpinEnd, o
       ctx.fillStyle = colors[i % colors.length]
       ctx.fill()
 
-        // Dibujar etiqueta (siempre, pero adaptativa según cantidad de items)
-        ctx.save()
-        ctx.translate(cx, cy)
-        const mid = start + anglePer / 2
-        ctx.rotate(mid)
-        // Calcular tamaño de fuente adaptativo
-        const fontSize = Math.max(7, Math.min(16, (radius * 0.09) * Math.min(1, 40 / n)))
-        // Leer la fuente principal desde la variable CSS `--app-font` para
-        // mantener la app flexible: cambiar la variable cambia todos los textos
-        // incluyendo el canvas (que no hereda CSS automáticamente).
-        let appFont = 'Sanchez, serif'
-        try {
-          const raw = getComputedStyle(document.documentElement).getPropertyValue('--app-font') || ''
-          appFont = raw.trim() || appFont
-        } catch (e) {
-          // en entornos sin window/document (SSR) queda el fallback
-        }
-        ctx.font = `${fontSize}px ${appFont}`
-        ctx.fillStyle = '#1f2937'
-        ctx.textAlign = 'right'
-        ctx.textBaseline = 'middle'
-        const labelRadius = radius * 0.82
-        const text = String(items[i] ?? '')
-        const short = makeShortLabel(text, n)
-        ctx.fillText(short, labelRadius, 0)
-        ctx.restore()
+      // Dibujar etiqueta (siempre, pero adaptativa según cantidad de items)
+      ctx.save()
+      ctx.translate(cx, cy)
+      const mid = start + anglePer / 2
+      ctx.rotate(mid)
+      // Calcular tamaño de fuente adaptativo
+      const fontSize = Math.max(7, Math.min(16, (radius * 0.09) * Math.min(1, 40 / n)))
+      // Leer la fuente principal desde la variable CSS `--app-font` para
+      // mantener la app flexible: cambiar la variable cambia todos los textos
+      // incluyendo el canvas (que no hereda CSS automáticamente).
+      let appFont = 'Google Sans, serif'
+      try {
+        const raw = getComputedStyle(document.documentElement).getPropertyValue('--app-font') || ''
+        appFont = raw.trim() || appFont
+      } catch (e) {
+        // en entornos sin window/document (SSR) queda el fallback
+      }
+      ctx.font = `${fontSize}px ${appFont}`
+      ctx.fillStyle = '#1f2937'
+      ctx.textAlign = 'right'
+      ctx.textBaseline = 'middle'
+      const labelRadius = radius * 0.82
+      const text = String(items[i] ?? '')
+      const short = makeShortLabel(text, n)
+      ctx.fillText(short, labelRadius, 0)
+      ctx.restore()
     }
 
     // Dibujar círculo central
@@ -192,6 +193,8 @@ export default function CanvasWheelSpin({ items = [], winningIndex, onSpinEnd, o
           // hide label while wheel is at rest
           pointerLabelRef.current.style.visibility = 'hidden'
         }
+        // Ensure center image has zero rotation at init
+        try { if (centerImgRef.current) centerImgRef.current.style.transform = 'translate(-50%, -50%) rotate(0rad)' } catch (e) { }
       } catch (err) {
         // ignore
       }
@@ -250,6 +253,11 @@ export default function CanvasWheelSpin({ items = [], winningIndex, onSpinEnd, o
       vctx.drawImage(offscreenRef.current, -sizeLocal / 2, -sizeLocal / 2, sizeLocal, sizeLocal)
       vctx.restore()
 
+      // Rotate the center image element to match the canvas rotation
+      try {
+        if (centerImgRef.current) centerImgRef.current.style.transform = `translate(-50%, -50%) rotate(${currentAngle}rad)`
+      } catch (e) { }
+
       // Actualizar etiqueta del puntero en cada frame (sin re-render de React)
       try {
         const idx = angleToIndex(currentAngle, n, anglePer)
@@ -269,6 +277,9 @@ export default function CanvasWheelSpin({ items = [], winningIndex, onSpinEnd, o
         vctx.rotate(totalTarget)
         vctx.drawImage(offscreenRef.current, -sizeLocal / 2, -sizeLocal / 2, sizeLocal, sizeLocal)
         vctx.restore()
+
+        // Ensure center image ends rotated to the final angle
+        try { if (centerImgRef.current) centerImgRef.current.style.transform = `translate(-50%, -50%) rotate(${totalTarget}rad)` } catch (e) { }
 
         // Asegurar etiqueta final y calcular índice final de forma más robusta
         let finalIdx = 0
@@ -309,15 +320,15 @@ export default function CanvasWheelSpin({ items = [], winningIndex, onSpinEnd, o
 
         for (let i = 0; i < blinkCount; i++) {
           const id = setTimeout(() => {
-            try { drawHighlight(i % 2 === 0) } catch (e) {}
+            try { drawHighlight(i % 2 === 0) } catch (e) { }
           }, i * blinkInterval)
           blinkTimersRef.current.push(id)
         }
 
         const endId = setTimeout(() => {
-          try { drawHighlight(false) } catch (e) {}
+          try { drawHighlight(false) } catch (e) { }
           // hide pointer label when wheel at rest
-          try { if (pointerLabelRef.current) pointerLabelRef.current.style.visibility = 'hidden' } catch (e) {}
+          try { if (pointerLabelRef.current) pointerLabelRef.current.style.visibility = 'hidden' } catch (e) { }
           try { onSpinEnd?.(finalIdx) } catch (err) { console.error(err) }
           blinkTimersRef.current = []
         }, blinkCount * blinkInterval + 80)
@@ -333,10 +344,12 @@ export default function CanvasWheelSpin({ items = [], winningIndex, onSpinEnd, o
       // clear any pending blink timers
       try {
         (blinkTimersRef.current || []).forEach(id => clearTimeout(id))
-      } catch (e) {}
+      } catch (e) { }
       blinkTimersRef.current = []
       // ensure pointer label hidden when cleaning up
-      try { if (pointerLabelRef.current) pointerLabelRef.current.style.visibility = 'hidden' } catch (e) {}
+      try { if (pointerLabelRef.current) pointerLabelRef.current.style.visibility = 'hidden' } catch (e) { }
+      // reset center image rotation on cleanup
+      try { if (centerImgRef.current) centerImgRef.current.style.transform = 'translate(-50%, -50%) rotate(0rad)' } catch (e) { }
     }
   }, [winningIndex, items, onSpinEnd, cfg.duration, cfg.dprMax, rotations, size])
 
@@ -361,10 +374,10 @@ export default function CanvasWheelSpin({ items = [], winningIndex, onSpinEnd, o
     left: '50%',
     transform: 'translateX(-50%)',
     background: 'white',
-    padding: '6px 10px',
+    padding: '10px 12px',
     borderRadius: 8,
     boxShadow: '0 4px 10px rgba(0,0,0,0.12)',
-    fontSize: 14,
+    fontSize: 16,
     zIndex: 20,
     pointerEvents: 'none',
     whiteSpace: 'nowrap',
@@ -375,11 +388,35 @@ export default function CanvasWheelSpin({ items = [], winningIndex, onSpinEnd, o
 
   return (
     <div style={{ position: 'relative', width: size, height: size }}>
-     
-     
+
+
       <canvas ref={canvasRef} style={{ display: 'block' }} aria-hidden="true" />
       <div style={pointerStyle} aria-hidden="true" />
       <div ref={pointerLabelRef} style={pointerLabelStyle} aria-hidden="true" />
+      <img
+        ref={centerImgRef}
+      className='opacity-90 '
+        style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          zIndex: 30,
+          // Logo scales proportionally with the wheel size. Use explicit
+          // width/height (px) so resizing the wheel also resizes the logo.
+          // Adjust `logoScale` to control the proportion of the wheel used.
+          width: `${Math.round(size * 0.08)}px`,
+          height: `${Math.round(size * 0.08)}px`,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          pointerEvents: 'none',
+          whiteSpace: 'nowrap',
+          userSelect: 'none',
+        }}
+        src="https://i.postimg.cc/tgpYr4Ry/loguito.png"
+        alt="Ruleta Logo"
+      />
+
     </div>
   )
 }
