@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import CanvasWheelSpin from './CanvasWheelSpin'
 import InfoModal from './InfoModal'
+import confetti from 'canvas-confetti';
+
 
 /*
  Module: App.jsx
@@ -50,6 +52,17 @@ const GlobalStyles = () => (
       0% { transform: scale(0.85); opacity: 0; }
       60% { transform: scale(1.03); opacity: 1; }
       100% { transform: scale(1); opacity: 1; }
+    }
+    /* Parpadeo rojo para los últimos segundos */
+    @keyframes blinkRed {
+      0% { opacity: 1; }
+      50% { opacity: 0.6; }
+      100% { opacity: 1; }
+    }
+
+    .blink-red {
+      animation: blinkRed 750ms linear infinite;
+      -webkit-animation: blinkRed 750ms linear infinite;
     }
     `}</style>
 );
@@ -530,6 +543,20 @@ const WinnerModal = ({ show, winner, onPresent, onClose, claimTime = 15, onTimeo
   const [countdown, setCountdown] = useState(claimTime);
   const [timedOut, setTimedOut] = useState(false);
 
+    useEffect(() => {
+      if (!show) return;
+  
+      // Lanza un par de ráfagas de confeti al abrir el modal
+      confetti({ particleCount: 150, spread: 200, origin: { y: 0.5 } });
+      const t = setTimeout(() => {
+        confetti({ particleCount: 120, spread: 100, origin: { y: 0.4 } });
+      }, 250);
+  
+      return () => clearTimeout(t);
+    }, [show]);
+  
+  
+  
   useEffect(() => {
     if (!show || !winner) return;
 
@@ -551,6 +578,9 @@ const WinnerModal = ({ show, winner, onPresent, onClose, claimTime = 15, onTimeo
   }, [show, winner, claimTime]);
 
   // If modal should not show, render nothing
+  // Añadir bandera para indicar si debe parpadear (últimos 5 segundos)
+  const shouldBlink = !timedOut && countdown <= 5 && countdown > 0;
+
   if (!show) return null;
 
   // Button state and label
@@ -587,7 +617,7 @@ const WinnerModal = ({ show, winner, onPresent, onClose, claimTime = 15, onTimeo
         <div className="w-1/3 flex flex-col items-center justify-center px-2.5 py-6">
           <div className="text-sm text-gray-600 mb-2">Tiempo:</div>
           {!timedOut ? (
-            <div className="text-9xl  font-extrabold text-black">{countdown}</div>
+            <div className={`text-9xl font-extrabold ${shouldBlink ? 'text-red-600 blink-red' : 'text-black'}`}>{countdown}</div>
           ) : (
             <div className="text-center">
               <div className="text-5xl font-extrabold text-red-600 mb-2">¡Se Acabó el tiempo!</div>
