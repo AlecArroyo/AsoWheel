@@ -30,7 +30,7 @@ const DEFAULT_CONFIG = {
   size: 200,
   pointerSize: 24,
   colors: ['#FA8500', '#3481CF', '#FFF'],
-  duration: 8000,
+  duration: 8200,
   rotations: 20,
   dprMax: 2,
   // Si hay más de X items, se ocultan las etiquetas para mejorar rendimiento
@@ -370,7 +370,7 @@ export default function CanvasWheelSpin({ items = [], winningIndex, onSpinEnd, o
 
   const pointerLabelStyle = {
     position: 'absolute',
-    top: pointerSize + 4,
+    top:  pointerSize + 4,
     left: '50%',
     transform: 'translateX(-50%)',
     background: 'white',
@@ -392,7 +392,7 @@ export default function CanvasWheelSpin({ items = [], winningIndex, onSpinEnd, o
 
       <canvas ref={canvasRef} style={{ display: 'block' }} aria-hidden="true" />
       <div style={pointerStyle} aria-hidden="true" />
-      <div ref={pointerLabelRef} style={pointerLabelStyle} aria-hidden="true" />
+      <div className='drop-shadow-2xl ' ref={pointerLabelRef} style={pointerLabelStyle} aria-hidden="true" />
       <img
         ref={centerImgRef}
       className='opacity-90 '

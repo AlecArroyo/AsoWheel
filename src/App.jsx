@@ -543,20 +543,20 @@ const WinnerModal = ({ show, winner, onPresent, onClose, claimTime = 15, onTimeo
   const [countdown, setCountdown] = useState(claimTime);
   const [timedOut, setTimedOut] = useState(false);
 
-    useEffect(() => {
-      if (!show) return;
-  
-      // Lanza un par de ráfagas de confeti al abrir el modal
-      confetti({ particleCount: 150, spread: 200, origin: { y: 0.5 } });
-      const t = setTimeout(() => {
-        confetti({ particleCount: 120, spread: 100, origin: { y: 0.4 } });
-      }, 250);
-  
-      return () => clearTimeout(t);
-    }, [show]);
-  
-  
-  
+  useEffect(() => {
+    if (!show) return;
+
+    // Lanza un par de ráfagas de confeti al abrir el modal
+    confetti({ particleCount: 150, spread: 200, origin: { y: 0.5 } });
+    const t = setTimeout(() => {
+      confetti({ particleCount: 120, spread: 100, origin: { y: 0.4 } });
+    }, 250);
+
+    return () => clearTimeout(t);
+  }, [show]);
+
+
+
   useEffect(() => {
     if (!show || !winner) return;
 
@@ -589,20 +589,31 @@ const WinnerModal = ({ show, winner, onPresent, onClose, claimTime = 15, onTimeo
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-      <div
-        className="bg-white rounded-2xl px-20 py-40 w-[92%] max-w-[1000px] shadow-2xl flex gap-2 relative"
-        style={{ animation: 'modalPop 600ms cubic-bezier(.2,.8,.2,1)' }}
-      >
-        {/* Left column: congratulations and name */}
-        <div className="flex-1 pl-4 pr-2.5 py-6">
+      <div className="bg-white rounded-2xl px-5 py-8 w-[50%] max-w-[1000px] shadow-2xl flex justify-center relative" style={{ animation: 'modalPop 600ms cubic-bezier(.2,.8,.2,1)' }}>
 
-          <div className="text-xl text-gray-600 mb-4">
+        {/* Right column: time info */}
+        <div className=" flex flex-col items-center justify-center px-2.5 py-6">
+          <div className="text-lg text-gray-800 mb-2 font-bold">
             {/* <img className="scale-60 h-100 m-0 p-3" src="https://img.freepik.com/free-vector/trophy_78370-345.jpg" alt="" /> */}
             <p>¡Felicidades!</p>
           </div>
-          <div className="text-6xl font-extrabold leading-tight mb-8">{winner}</div>
+          <div className='flex justify-center'>
+            <div className="text-5xl font-extrabold leading-tight mb-2">{winner}</div>
+          </div>
+          
 
-          <div className="mt-6">
+
+          <div className="text-md text-gray-600 mb-20 font-light">Confirma tu presencia antes que se acabe el <span className='font-bold'> tiempo </span></div>
+          <div className="text-md text-gray-600 mb-2">Te quedan:</div>
+          {!timedOut ? (
+            <div className={`text-7xl font-bold ${shouldBlink ? 'text-red-600 blink-red' : 'text-black'}`}>00:{countdown}</div>
+          ) : (
+            <div className="text-center">
+              <div className="text-4xl font-extrabold text-red-600 ">¡Se Acabó el tiempo!</div>
+            </div>
+          )}
+
+          <div className="mt-10">
             <button
               onClick={() => { if (!btnDisabled) onPresent(); }}
               disabled={btnDisabled}
@@ -611,29 +622,18 @@ const WinnerModal = ({ show, winner, onPresent, onClose, claimTime = 15, onTimeo
               {btnLabel}
             </button>
           </div>
+          {/* Bottom-right link to continue (only visible after timeout) */}
+          <div className='mt-5'>
+            {timedOut && (
+              <button onClick={() => { if (typeof onTimeout === 'function') onTimeout(winner); else if (typeof onClose === 'function') onClose(); }} className="text-sm text-gray-800 font-medium flex items-center gap-2 hover:underline">
+                Continuar con el sorteo <span style={{ transform: 'translateY(2px)' }}>→</span>
+              </button>
+            )}
+          </div>
+
         </div>
 
-        {/* Right column: time info */}
-        <div className="w-1/3 flex flex-col items-center justify-center px-2.5 py-6">
-          <div className="text-sm text-gray-600 mb-2">Tiempo:</div>
-          {!timedOut ? (
-            <div className={`text-9xl font-extrabold ${shouldBlink ? 'text-red-600 blink-red' : 'text-black'}`}>{countdown}</div>
-          ) : (
-            <div className="text-center">
-              <div className="text-5xl font-extrabold text-red-600 mb-2">¡Se Acabó el tiempo!</div>
-              <div className="text-sm text-red-400">¡Atento al tiempo la próxima vez!</div>
-            </div>
-          )}
-        </div>
 
-        {/* Bottom-right link to continue (only visible after timeout) */}
-        <div style={{ position: 'absolute', right: 32, bottom: 28 }}>
-          {timedOut && (
-            <button onClick={() => { if (typeof onTimeout === 'function') onTimeout(winner); else if (typeof onClose === 'function') onClose(); }} className="text-sm text-gray-800 flex items-center gap-2 hover:underline">
-              Continuar con el sorteo <span style={{ transform: 'translateY(2px)' }}>→</span>
-            </button>
-          )}
-        </div>
       </div>
     </div>
   );
@@ -744,7 +744,7 @@ const Controls = ({
         {activeTab === 'participantes' && (
           <>
             <label className="text-sm text-gray-600 mb-2 font-bold">Lista (uno por línea):</label>
-            <textarea 
+            <textarea
               value={participantsText}
               onChange={(e) => { if (!isSpinning) setParticipantsText(e.target.value) }}
               disabled={isSpinning}
