@@ -103,6 +103,9 @@ export default function App() {
   // Estado para la lista de ausentes (ganadores que no reclaman)
   const [absentees, setAbsentees] = useState([]);
 
+  // AGREGAR ESTE NUEVO ESTADO AQUÍ:
+  const [showPanel, setShowPanel] = useState(true);
+
   const [winningIndex, setWinningIndex] = useState(null);
 
   // Bandera que indica si la ruleta está girando. Usada para deshabilitar controles/zoom.
@@ -338,6 +341,13 @@ export default function App() {
       <FestiveBackground />
       <Header />
 
+      <button
+        onClick={() => setShowPanel(!showPanel)}
+        className="material-symbols-outlined mx-0.5 mt-2.5 fixed top-4 right-4 z-50 bg-white/90 backdrop-blur-sm border text-neutral-500 border-gray-200 p-2 rounded-full shadow-lg hover:scale-105 transition-transform"
+        aria-label={showPanel ? 'Ocultar panel' : 'Mostrar panel'}
+        title={showPanel ? 'Ocultar panel' : 'Mostrar panel'}
+      >{showPanel ? 'left_panel_open' : 'left_panel_close'}</button>
+
       {/* Notification toast (subtle) */}
       {notification && (() => {
         // compute transform based on notificationStage and config
@@ -406,7 +416,9 @@ export default function App() {
 
 
       {/* Contenedor principal para la ruleta */}
-      <div className="w-full md:w-2/3 flex flex-col items-center justify-center relative z-10 px-4 md:px-0">
+      {/* Contenedor principal para la ruleta */}
+      <div className={`flex flex-col items-center justify-center relative z-10 px-4 md:px-0 transition-all duration-300 ${showPanel ? 'w-full md:w-2/3' : 'w-full'
+        }`}>
         {participants.length > 0 ? (
           <>
             {/* Contenedor responsivo para la ruleta (medido por ResizeObserver) */}
@@ -501,21 +513,28 @@ export default function App() {
       </div>
 
       {/* Panel lateral de controles */}
-      <div className="w-full md:w-1/3 bg-gray-50/80 backdrop-blur-sm p-6 md:p-8 border-l border-gray-200/50 z-10">
-        <Controls
-          participants={participants}
-          participantsText={participantsText}
-          setParticipantsText={setParticipantsText}
-          participantCount={participants.length}
-          winners={winners}
-          setWinners={setWinners}
-          absentees={absentees}
-          setAbsentees={setAbsentees}
-          settings={settings}
-          setSettings={setSettings}
-          isSpinning={isSpinning}
-        />
-      </div>
+    {/* Panel lateral de controles */}
+<div className={`bg-gray-50/80 backdrop-blur-sm p-6 md:p-8 border-l border-gray-200/50 z-10 transition-all duration-300 ${
+  showPanel 
+    ? 'w-full md:w-1/3 opacity-100' 
+    : 'w-0 opacity-0 overflow-hidden p-0'
+}`}>
+  {showPanel && (
+    <Controls
+      participants={participants}
+      participantsText={participantsText}
+      setParticipantsText={setParticipantsText}
+      participantCount={participants.length}
+      winners={winners}
+      setWinners={setWinners}
+      absentees={absentees}
+      setAbsentees={setAbsentees}
+      settings={settings}
+      setSettings={setSettings}
+      isSpinning={isSpinning}
+    />
+  )}
+</div>
 
       {/* Modal del ganador (renderizado condicional) */}
       <InfoModal show={showInfo} onClose={() => setShowInfo(false)} />
@@ -600,13 +619,15 @@ const WinnerModal = ({ show, winner, onPresent, onClose, claimTime = 15, onTimeo
           <div className='flex justify-center'>
             <div className="text-5xl font-extrabold leading-tight mb-2">{winner}</div>
           </div>
-          
+
 
 
           <div className="text-md text-gray-600 mb-20 font-light">Confirma tu presencia antes que se acabe el <span className='font-bold'> tiempo </span></div>
           <div className="text-md text-gray-600 mb-2">Te quedan:</div>
           {!timedOut ? (
-            <div className={`text-7xl font-bold ${shouldBlink ? 'text-red-600 blink-red' : 'text-black'}`}>00:{countdown}</div>
+            <div className={`text-7xl font-bold ${shouldBlink ? 'text-red-600 blink-red' : 'text-black'}`}>
+              00:{String(countdown).padStart(2, '0')}
+            </div>
           ) : (
             <div className="text-center">
               <div className="text-4xl font-extrabold text-red-600 ">¡Se Acabó el tiempo!</div>
