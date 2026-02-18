@@ -342,12 +342,15 @@ export default function App() {
       <Header />
 
       <button
-        onClick={() => setShowPanel(!showPanel)}
-        className="material-symbols-outlined mx-0.5 mt-2.5 fixed top-4 right-4 z-50 bg-white/90 backdrop-blur-sm border text-neutral-500 border-gray-200 p-2 rounded-full shadow-lg hover:scale-105 transition-transform"
+        onClick={() => { if (!isSpinning) setShowPanel(!showPanel); }}
+        disabled={isSpinning}
+        className={
+          `material-symbols-outlined mx-0.5 mt-2.5 fixed top-4 right-4 z-50 bg-white/90 backdrop-blur-sm border text-neutral-500 border-gray-200 p-2 rounded-full shadow-lg transition-transform ` +
+          (isSpinning ? 'opacity-60 cursor-not-allowed' : 'hover:scale-105')
+        }
         aria-label={showPanel ? 'Ocultar panel' : 'Mostrar panel'}
         title={showPanel ? 'Ocultar panel' : 'Mostrar panel'}
       >{showPanel ? 'left_panel_open' : 'left_panel_close'}</button>
-
       {/* Notification toast (subtle) */}
       {notification && (() => {
         // compute transform based on notificationStage and config
