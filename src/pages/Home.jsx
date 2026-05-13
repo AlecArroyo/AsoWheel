@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import CanvasWheelSpin from './CanvasWheelSpin'
-import InfoModal from './InfoModal'
+import CanvasWheelSpin from '../CanvasWheelSpin'
+import InfoModal from '../InfoModal'
 import confetti from 'canvas-confetti';
 
 
@@ -87,7 +87,7 @@ const Header = () => (
  * - Mantiene el estado central (participantsText, participants, winners).
  * - Controla el tamaño responsivo de la ruleta y dispara giros.
  */
-export default function App() {
+export default function Home() {
   // --- Estados Principales ---
   // Estado para el texto del área de participantes. Es la "fuente de la verdad".
   const [participantsText, setParticipantsText] = useState('');

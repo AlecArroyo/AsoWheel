@@ -1,11 +1,40 @@
-// Entrada principal de la aplicación: monta el componente `App` en el DOM
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { RouterProvider, createRouter, createRoute, createRootRoute, redirect } from '@tanstack/react-router'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import './index.css'
-import App from './App.jsx'
+import Home from './pages/Home.jsx'
+import Login from './pages/Login.jsx'
+
+const queryClient = new QueryClient()
+
+const rootRoute = createRootRoute()
+
+const homeRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/',
+  component: Home,
+  beforeLoad: () => {
+    if (!localStorage.getItem('token')) {
+      throw redirect({ to: '/login' })
+    }
+  }
+})
+
+const loginRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/login',
+  component: Login,
+})
+
+const routeTree = rootRoute.addChildren([homeRoute, loginRoute])
+
+const router = createRouter({ routeTree })
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <App />
-  </StrictMode>,
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>
+  </StrictMode>
 )
