@@ -20,7 +20,7 @@ const FestiveBackground = () => (
 );
 
 const GlobalStyles = () => (
-  <style jsx global>{`
+  <style>{`
     @keyframes gradientBG {
       0% { background-position: 0% 50%; }
       50% { background-position: 100% 50%; }
@@ -57,7 +57,7 @@ export default function Register() {
   const navigate = useNavigate();
 
   // Manejador del envío del formulario
-const handleSubmit = async (e) => {
+const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
   e.preventDefault();
   setError('');
 
@@ -75,7 +75,7 @@ const handleSubmit = async (e) => {
   try {
     await register(username, password);
     setIsSuccess(true);
-  } catch (error) {
+  } catch (error: unknown) {
     setError('Error al registrar. El correo ya existe o hubo un problema.');
   } finally {
     setIsLoading(false);

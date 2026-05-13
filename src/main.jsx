@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import './index.css'
 import Home from './pages/Home.jsx'
 import Login from './pages/Login.jsx'
-import Register from './pages/Register.js'
+import Register from './pages/Register.tsx'
 
 const queryClient = new QueryClient()
 
