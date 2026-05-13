@@ -114,9 +114,9 @@ export default function Login() {
                     </div>
 
                     <div className="flex justify-end px-2">
-                        <a href="#" className="text-xs text-blue-600 hover:underline font-medium transition-colors">
+                        {/* <a href="#" className="text-xs text-blue-600 hover:underline font-medium transition-colors">
                             ¿Olvidaste tu contraseña?
-                        </a>
+                        </a> */}
                     </div>
 
                     {/* Botón de Enviar (mismo estilo que "Girar Ruleta") */}
