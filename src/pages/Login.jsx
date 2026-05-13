@@ -87,9 +87,9 @@ export default function Login() {
                             <span className="material-symbols-outlined text-gray-400 text-xl">mail</span>
                         </div>
                         <input
-                            type="email"
+                            type="text"
                             required
-                            placeholder="Correo electrónico"
+                            placeholder="Usuario o correo electrónico"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             disabled={isLoading}
