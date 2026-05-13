@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import CanvasWheelSpin from '../CanvasWheelSpin'
 import InfoModal from '../InfoModal'
 import confetti from 'canvas-confetti';
+import { useNavigate } from '@tanstack/react-router';
+import { logout, getUserEmail } from '../authService';
 
 
 /*
@@ -146,6 +148,9 @@ export default function Home() {
   const [showSizeControls, setShowSizeControls] = useState(false)
   // Estado para mostrar el modal de información
   const [showInfo, setShowInfo] = useState(false);
+  const [userEmail, setUserEmail] = useState('');
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const navigate = useNavigate();
 
 
   // Paleta de colores para asignar a los segmentos de la ruleta.
@@ -244,6 +249,10 @@ export default function Home() {
       setShowModal(true);
     }
   }, [winner]);
+
+  useEffect(() => {
+    setUserEmail(getUserEmail());
+  }, []);
 
   // Notification lifecycle: handle enter, visible and exit stages using toastConfig
   useEffect(() => {
@@ -351,6 +360,49 @@ export default function Home() {
         aria-label={showPanel ? 'Ocultar panel' : 'Mostrar panel'}
         title={showPanel ? 'Ocultar panel' : 'Mostrar panel'}
       >{showPanel ? 'left_panel_open' : 'left_panel_close'}</button>
+
+      <button
+        type="button"
+        onClick={() => setShowUserMenu(prev => !prev)}
+        className={`fixed top-4 right-20 z-50 w-12 h-12 rounded-full bg-white/90 backdrop-blur-sm border border-gray-200 shadow-lg flex items-center justify-center text-neutral-600 transition-transform ${isSpinning ? 'opacity-60 cursor-not-allowed' : 'hover:scale-105'}`}
+        title="Sesión activa"
+        aria-label="Opciones de sesión"
+        aria-disabled={isSpinning}
+      >
+        <span className="material-symbols-outlined">account_circle</span>
+      </button>
+
+      {showUserMenu && (
+        <div className="fixed top-20 right-4 z-50 w-72 rounded-3xl bg-white/95 backdrop-blur-lg border border-gray-200 shadow-2xl p-4 text-sm text-gray-800">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <p className="text-xs uppercase tracking-[0.21em] text-gray-500">Sesión activa</p>
+              <p className="mt-2 text-sm font-semibold text-gray-900 wrap-break-word">{userEmail || 'Usuario activo'}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowUserMenu(false)}
+              className="rounded-full p-1 text-gray-500 hover:bg-gray-100"
+              aria-label="Cerrar menú"
+            >
+              <span className="material-symbols-outlined text-base">close</span>
+            </button>
+          </div>
+          <div className="mt-4 border-t border-gray-200 pt-3">
+            <button
+              type="button"
+              onClick={() => {
+                logout();
+                navigate({ to: '/login' });
+              }}
+              className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-red-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-red-600"
+            >
+              <span className="material-symbols-outlined">logout</span>
+              Cerrar sesión
+            </button>
+          </div>
+        </div>
+      )}
       {/* Notification toast (subtle) */}
       {notification && (() => {
         // compute transform based on notificationStage and config
