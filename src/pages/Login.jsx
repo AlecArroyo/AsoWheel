@@ -136,7 +136,7 @@ export default function Login() {
 
                 <div className="mt-8 text-center">
                     <p className="text-sm text-gray-600 font-light">
-                        ¿No tienes cuenta? <a href="#" className="text-blue-600 font-medium hover:underline">Solicitar acceso</a>
+                        ¿No tienes cuenta? <a href="/register" className="text-blue-600 font-medium hover:underline">Registrarse</a>
                     </p>
                 </div>
             </div>
